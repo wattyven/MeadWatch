@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+    <title>MeadWatch · Lake Mead drought explorer</title>
+    <meta name="description" content="Interactive 3D map of Lake Mead's record-low water levels, forecasts, and the people, farms and power customers downstream who depend on it."/>
+    <link rel="preconnect" href="https://fonts.googleapis.com"/>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet"/>
+</head>
+<body>
+<div id="map" aria-label="3D map of Lake Mead and downstream regions"></div>
+
+<header class="brand panel">
+    <div class="brand-row">
+        <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+            <path d="M16 3c5 7 9 11.6 9 16.4A9 9 0 0 1 7 19.4C7 14.6 11 10 16 3z" fill="currentColor" opacity=".9"/>
+            <path d="M8 21h16" stroke="#0b1320" stroke-width="2.2"/>
+        </svg>
+        <div>
+            <h1>MeadWatch</h1>
+            <p class="tagline">Lake Mead drought explorer</p>
+        </div>
+    </div>
+    <div class="alert" id="alert"></div>
+</header>
+
+<div class="toolbar panel" role="toolbar" aria-label="Map options">
+    <div class="seg" id="basemap" role="radiogroup" aria-label="Basemap">
+        <button data-v="topo" class="on" role="radio" aria-checked="true">Topo</button>
+        <button data-v="osm" role="radio" aria-checked="false">OSM</button>
+        <button data-v="satellite" role="radio" aria-checked="false">Satellite</button>
+    </div>
+    <div class="seg" id="views" aria-label="Camera views">
+        <button data-v="lake">Lake Mead</button>
+        <button data-v="dam">Hoover Dam</button>
+        <button data-v="overton">Overton Arm</button>
+        <button data-v="region">Downstream</button>
+    </div>
+    <label class="check"><input type="checkbox" id="terrain" checked/> 3D terrain</label>
+    <label class="check"><input type="checkbox" id="ghost" checked/> Full-pool outline</label>
+</div>
+
+<nav class="mtabs panel" id="mtabs" aria-label="Panels">
+    <button data-p="metrics" aria-pressed="false">Lake level</button>
+    <button data-p="impacts" aria-pressed="false">Who’s affected</button>
+</nav>
+
+<aside class="panel side left" id="metrics" aria-label="Lake Mead metrics">
+    <button class="collapse" aria-expanded="true" aria-controls="metrics-body" title="Collapse panel">–</button>
+    <div id="metrics-body"></div>
+</aside>
+
+<aside class="panel side right" id="impacts" aria-label="Who depends on Lake Mead">
+    <button class="collapse" aria-expanded="true" aria-controls="impacts-body" title="Collapse panel">–</button>
+    <div id="impacts-body"></div>
+</aside>
+
+<div class="legend panel" id="legend"></div>
+
+<section class="timeline panel" aria-label="Timeline and water level controls">
+    <div class="tl-controls">
+        <button id="play" class="btn-play" aria-label="Play timeline">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M6 4l10 6-10 6z" fill="currentColor"/></svg>
+        </button>
+        <div class="seg" id="mode" role="radiogroup" aria-label="Mode">
+            <button data-v="timeline" class="on" role="radio" aria-checked="true">Timeline</button>
+            <button data-v="manual" role="radio" aria-checked="false">What-if level</button>
+        </div>
+        <label class="field" id="scenario-field">Forecast
+            <select id="scenario">
+                <option value="most">Most probable</option>
+                <option value="min">Probable minimum (dry)</option>
+                <option value="max">Probable maximum (wet)</option>
+            </select>
+        </label>
+        <div class="elev-control">
+            <label for="elev-input" class="field-label">Water level</label>
+            <input type="range" id="elev-slider" min="870" max="1229" step="0.5" aria-label="Water level slider (feet)"/>
+            <span class="num"><input type="number" id="elev-input" min="870" max="1229" step="0.5"/> ft</span>
+        </div>
+        <div class="seg small" id="regime" role="radiogroup" aria-label="Operating rules" hidden>
+            <button data-v="2027" class="on" role="radio" aria-checked="true">2027–28 rules</button>
+            <button data-v="2007" role="radio" aria-checked="false">2007 rules + DCP</button>
+        </div>
+        <button id="today" class="btn-link">Jump to today</button>
+    </div>
+    <div id="tl-chart" class="tl-chart"></div>
+</section>
+
+<div id="loading" class="loading">
+    <div class="spinner"></div>
+    <p>Loading lake-floor bathymetry and live USBR data…</p>
+</div>
+
+<script type="module" src="/src/main.ts"></script>
+</body>
+</html>

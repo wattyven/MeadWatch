@@ -1,0 +1,905 @@
+{
+ "source": "U.S. Bureau of Reclamation, 24-Month Study (Operation Plan for Colorado River System Reservoirs)",
+ "url": "https://www.usbr.gov/lc/region/g4000/24mo/index.html",
+ "scenarios": [
+  {
+   "id": "min",
+   "label": "Probable Minimum",
+   "study": "September 2026",
+   "url": "https://www.usbr.gov/lc/region/g4000/24mo/2026/SEP26_MIN.pdf",
+   "note": "Dry hydrology, exceeded ~90% of the time.",
+   "series": [
+    {
+     "date": "2025-09-30",
+     "elevationFt": 1057.25,
+     "storageKaf": 8216.0,
+     "hooverCapacityMw": 905.0,
+     "hooverEnergyGwh": 164.7,
+     "unitsAvailablePct": 65.0
+    },
+    {
+     "date": "2025-10-31",
+     "elevationFt": 1057.57,
+     "storageKaf": 8240.0,
+     "hooverCapacityMw": 738.0,
+     "hooverEnergyGwh": 175.7,
+     "unitsAvailablePct": 53.0
+    },
+    {
+     "date": "2025-11-30",
+     "elevationFt": 1058.91,
+     "storageKaf": 8341.0,
+     "hooverCapacityMw": 752.5,
+     "hooverEnergyGwh": 151.8,
+     "unitsAvailablePct": 54.0
+    },
+    {
+     "date": "2025-12-31",
+     "elevationFt": 1062.24,
+     "storageKaf": 8594.0,
+     "hooverCapacityMw": 701.1,
+     "hooverEnergyGwh": 97.0,
+     "unitsAvailablePct": 49.0
+    },
+    {
+     "date": "2026-01-31",
+     "elevationFt": 1065.37,
+     "storageKaf": 8836.0,
+     "hooverCapacityMw": 854.0,
+     "hooverEnergyGwh": 143.3,
+     "unitsAvailablePct": 58.0
+    },
+    {
+     "date": "2026-02-28",
+     "elevationFt": 1066.14,
+     "storageKaf": 8896.0,
+     "hooverCapacityMw": 862.0,
+     "hooverEnergyGwh": 182.4,
+     "unitsAvailablePct": 58.0
+    },
+    {
+     "date": "2026-03-31",
+     "elevationFt": 1062.05,
+     "storageKaf": 8579.0,
+     "hooverCapacityMw": 680.1,
+     "hooverEnergyGwh": 311.8,
+     "unitsAvailablePct": 47.0
+    },
+    {
+     "date": "2026-04-30",
+     "elevationFt": 1056.32,
+     "storageKaf": 8146.0,
+     "hooverCapacityMw": 750.4,
+     "hooverEnergyGwh": 330.6,
+     "unitsAvailablePct": 53.0
+    },
+    {
+     "date": "2026-05-31",
+     "elevationFt": 1050.0,
+     "storageKaf": 7683.0,
+     "hooverCapacityMw": 1007.8,
+     "hooverEnergyGwh": 324.2,
+     "unitsAvailablePct": 73.0
+    },
+    {
+     "date": "2026-06-30",
+     "elevationFt": 1044.58,
+     "storageKaf": 7296.0,
+     "hooverCapacityMw": 1312.1,
+     "hooverEnergyGwh": 298.3,
+     "unitsAvailablePct": 97.0
+    },
+    {
+     "date": "2026-07-31",
+     "elevationFt": 1041.1,
+     "storageKaf": 7054.0,
+     "hooverCapacityMw": 1287.9,
+     "hooverEnergyGwh": 251.5,
+     "unitsAvailablePct": 97.0
+    },
+    {
+     "date": "2026-08-31",
+     "elevationFt": 1038.83,
+     "storageKaf": 6897.0,
+     "hooverCapacityMw": 1275.3,
+     "hooverEnergyGwh": 217.5,
+     "unitsAvailablePct": 97.0
+    },
+    {
+     "date": "2026-09-30",
+     "elevationFt": 1038.36,
+     "storageKaf": 6865.0,
+     "hooverCapacityMw": 1191.6,
+     "hooverEnergyGwh": 181.7,
+     "unitsAvailablePct": 91.0
+    },
+    {
+     "date": "2026-10-31",
+     "elevationFt": 1034.83,
+     "storageKaf": 6626.0,
+     "hooverCapacityMw": 928.4,
+     "hooverEnergyGwh": 227.6,
+     "unitsAvailablePct": 72.0
+    },
+    {
+     "date": "2026-11-30",
+     "elevationFt": 1034.23,
+     "storageKaf": 6586.0,
+     "hooverCapacityMw": 835.1,
+     "hooverEnergyGwh": 146.1,
+     "unitsAvailablePct": 65.0
+    },
+    {
+     "date": "2026-12-31",
+     "elevationFt": 1033.58,
+     "storageKaf": 6542.0,
+     "hooverCapacityMw": 1096.3,
+     "hooverEnergyGwh": 174.1,
+     "unitsAvailablePct": 85.0
+    },
+    {
+     "date": "2027-01-31",
+     "elevationFt": 1033.23,
+     "storageKaf": 6519.0,
+     "hooverCapacityMw": 928.8,
+     "hooverEnergyGwh": 161.2,
+     "unitsAvailablePct": 72.0
+    },
+    {
+     "date": "2027-02-28",
+     "elevationFt": 1032.72,
+     "storageKaf": 6485.0,
+     "hooverCapacityMw": 595.7,
+     "hooverEnergyGwh": 156.1,
+     "unitsAvailablePct": 47.0
+    },
+    {
+     "date": "2027-03-31",
+     "elevationFt": 1025.67,
+     "storageKaf": 6024.0,
+     "hooverCapacityMw": 932.0,
+     "hooverEnergyGwh": 316.4,
+     "unitsAvailablePct": 76.0
+    },
+    {
+     "date": "2027-04-30",
+     "elevationFt": 1016.96,
+     "storageKaf": 5476.0,
+     "hooverCapacityMw": 312.8,
+     "hooverEnergyGwh": 227.7,
+     "unitsAvailablePct": 24.0
+    },
+    {
+     "date": "2027-05-31",
+     "elevationFt": 1009.66,
+     "storageKaf": 5034.0,
+     "hooverCapacityMw": 300.8,
+     "hooverEnergyGwh": 225.6,
+     "unitsAvailablePct": 24.0
+    },
+    {
+     "date": "2027-06-30",
+     "elevationFt": 1004.47,
+     "storageKaf": 4731.0,
+     "hooverCapacityMw": 292.2,
+     "hooverEnergyGwh": 211.5,
+     "unitsAvailablePct": 24.0
+    },
+    {
+     "date": "2027-07-31",
+     "elevationFt": 1003.28,
+     "storageKaf": 4662.0,
+     "hooverCapacityMw": 290.3,
+     "hooverEnergyGwh": 215.8,
+     "unitsAvailablePct": 24.0
+    },
+    {
+     "date": "2027-08-31",
+     "elevationFt": 1005.28,
+     "storageKaf": 4777.0,
+     "hooverCapacityMw": 293.6,
+     "hooverEnergyGwh": 214.2,
+     "unitsAvailablePct": 24.0
+    },
+    {
+     "date": "2027-09-30",
+     "elevationFt": 1005.83,
+     "storageKaf": 4809.0,
+     "hooverCapacityMw": 294.5,
+     "hooverEnergyGwh": 179.5,
+     "unitsAvailablePct": 24.0
+    },
+    {
+     "date": "2027-10-31",
+     "elevationFt": 1005.35,
+     "storageKaf": 4782.0,
+     "hooverCapacityMw": 220.3,
+     "hooverEnergyGwh": 142.0,
+     "unitsAvailablePct": 18.0
+    },
+    {
+     "date": "2027-11-30",
+     "elevationFt": 1003.29,
+     "storageKaf": 4662.0,
+     "hooverCapacityMw": 217.7,
+     "hooverEnergyGwh": 162.9,
+     "unitsAvailablePct": 18.0
+    },
+    {
+     "date": "2027-12-31",
+     "elevationFt": 1002.6,
+     "storageKaf": 4623.0,
+     "hooverCapacityMw": 289.1,
+     "hooverEnergyGwh": 157.5,
+     "unitsAvailablePct": 24.0
+    },
+    {
+     "date": "2028-01-31",
+     "elevationFt": 1002.63,
+     "storageKaf": 4625.0,
+     "hooverCapacityMw": 216.9,
+     "hooverEnergyGwh": 145.3,
+     "unitsAvailablePct": 18.0
+    },
+    {
+     "date": "2028-02-29",
+     "elevationFt": 1002.0,
+     "storageKaf": 4589.0,
+     "hooverCapacityMw": 216.1,
+     "hooverEnergyGwh": 143.0,
+     "unitsAvailablePct": 18.0
+    },
+    {
+     "date": "2028-03-31",
+     "elevationFt": 994.18,
+     "storageKaf": 4152.0,
+     "hooverCapacityMw": 274.4,
+     "hooverEnergyGwh": 207.7,
+     "unitsAvailablePct": 24.0
+    },
+    {
+     "date": "2028-04-30",
+     "elevationFt": 984.23,
+     "storageKaf": 3622.0,
+     "hooverCapacityMw": 256.9,
+     "hooverEnergyGwh": 188.5,
+     "unitsAvailablePct": 24.0
+    },
+    {
+     "date": "2028-05-31",
+     "elevationFt": 980.59,
+     "storageKaf": 3436.0,
+     "hooverCapacityMw": 250.5,
+     "hooverEnergyGwh": 187.4,
+     "unitsAvailablePct": 24.0
+    },
+    {
+     "date": "2028-06-30",
+     "elevationFt": 978.22,
+     "storageKaf": 3316.0,
+     "hooverCapacityMw": 246.3,
+     "hooverEnergyGwh": 177.6,
+     "unitsAvailablePct": 24.0
+    },
+    {
+     "date": "2028-07-31",
+     "elevationFt": 977.12,
+     "storageKaf": 3261.0,
+     "hooverCapacityMw": 244.3,
+     "hooverEnergyGwh": 181.7,
+     "unitsAvailablePct": 24.0
+    },
+    {
+     "date": "2028-08-31",
+     "elevationFt": 979.78,
+     "storageKaf": 3394.0,
+     "hooverCapacityMw": 249.0,
+     "hooverEnergyGwh": 183.7,
+     "unitsAvailablePct": 24.0
+    }
+   ]
+  },
+  {
+   "id": "most",
+   "label": "Most Probable",
+   "study": "July 2026",
+   "url": "https://www.usbr.gov/lc/region/g4000/24mo/2026/JUL26.pdf",
+   "note": "Median hydrology. Latest full Most Probable table available; the September 2026 Most Probable run projects 1,034.18 ft on Dec 31, 2026.",
+   "series": [
+    {
+     "date": "2025-07-31",
+     "elevationFt": 1054.14,
+     "storageKaf": 7985.0,
+     "hooverCapacityMw": 1186.1,
+     "hooverEnergyGwh": 262.6,
+     "unitsAvailablePct": 85.0
+    },
+    {
+     "date": "2025-08-31",
+     "elevationFt": 1055.54,
+     "storageKaf": 8088.0,
+     "hooverCapacityMw": 1180.9,
+     "hooverEnergyGwh": 227.3,
+     "unitsAvailablePct": 85.0
+    },
+    {
+     "date": "2025-09-30",
+     "elevationFt": 1057.25,
+     "storageKaf": 8216.0,
+     "hooverCapacityMw": 905.0,
+     "hooverEnergyGwh": 164.7,
+     "unitsAvailablePct": 65.0
+    },
+    {
+     "date": "2025-10-31",
+     "elevationFt": 1057.57,
+     "storageKaf": 8240.0,
+     "hooverCapacityMw": 738.0,
+     "hooverEnergyGwh": 175.7,
+     "unitsAvailablePct": 53.0
+    },
+    {
+     "date": "2025-11-30",
+     "elevationFt": 1058.91,
+     "storageKaf": 8341.0,
+     "hooverCapacityMw": 752.5,
+     "hooverEnergyGwh": 151.8,
+     "unitsAvailablePct": 54.0
+    },
+    {
+     "date": "2025-12-31",
+     "elevationFt": 1062.24,
+     "storageKaf": 8594.0,
+     "hooverCapacityMw": 701.1,
+     "hooverEnergyGwh": 97.0,
+     "unitsAvailablePct": 49.0
+    },
+    {
+     "date": "2026-01-31",
+     "elevationFt": 1065.37,
+     "storageKaf": 8836.0,
+     "hooverCapacityMw": 854.0,
+     "hooverEnergyGwh": 143.3,
+     "unitsAvailablePct": 58.0
+    },
+    {
+     "date": "2026-02-28",
+     "elevationFt": 1066.14,
+     "storageKaf": 8896.0,
+     "hooverCapacityMw": 862.0,
+     "hooverEnergyGwh": 182.4,
+     "unitsAvailablePct": 58.0
+    },
+    {
+     "date": "2026-03-31",
+     "elevationFt": 1062.05,
+     "storageKaf": 8579.0,
+     "hooverCapacityMw": 680.1,
+     "hooverEnergyGwh": 311.8,
+     "unitsAvailablePct": 47.0
+    },
+    {
+     "date": "2026-04-30",
+     "elevationFt": 1056.32,
+     "storageKaf": 8146.0,
+     "hooverCapacityMw": 750.4,
+     "hooverEnergyGwh": 330.6,
+     "unitsAvailablePct": 53.0
+    },
+    {
+     "date": "2026-05-31",
+     "elevationFt": 1050.0,
+     "storageKaf": 7683.0,
+     "hooverCapacityMw": 1007.8,
+     "hooverEnergyGwh": 324.2,
+     "unitsAvailablePct": 73.0
+    },
+    {
+     "date": "2026-06-30",
+     "elevationFt": 1044.58,
+     "storageKaf": 7296.0,
+     "hooverCapacityMw": 1312.1,
+     "hooverEnergyGwh": 298.3,
+     "unitsAvailablePct": 97.0
+    },
+    {
+     "date": "2026-07-31",
+     "elevationFt": 1040.8,
+     "storageKaf": 7033.0,
+     "hooverCapacityMw": 1287.9,
+     "hooverEnergyGwh": 264.8,
+     "unitsAvailablePct": 97.0
+    },
+    {
+     "date": "2026-08-31",
+     "elevationFt": 1038.94,
+     "storageKaf": 6905.0,
+     "hooverCapacityMw": 1275.3,
+     "hooverEnergyGwh": 224.7,
+     "unitsAvailablePct": 97.0
+    },
+    {
+     "date": "2026-09-30",
+     "elevationFt": 1037.17,
+     "storageKaf": 6784.0,
+     "hooverCapacityMw": 1097.3,
+     "hooverEnergyGwh": 217.5,
+     "unitsAvailablePct": 85.0
+    },
+    {
+     "date": "2026-10-31",
+     "elevationFt": 1037.26,
+     "storageKaf": 6790.0,
+     "hooverCapacityMw": 890.8,
+     "hooverEnergyGwh": 170.5,
+     "unitsAvailablePct": 69.0
+    },
+    {
+     "date": "2026-11-30",
+     "elevationFt": 1035.86,
+     "storageKaf": 6695.0,
+     "hooverCapacityMw": 751.8,
+     "hooverEnergyGwh": 212.3,
+     "unitsAvailablePct": 59.0
+    },
+    {
+     "date": "2026-12-31",
+     "elevationFt": 1037.31,
+     "storageKaf": 6794.0,
+     "hooverCapacityMw": 1191.9,
+     "hooverEnergyGwh": 182.0,
+     "unitsAvailablePct": 92.0
+    },
+    {
+     "date": "2027-01-31",
+     "elevationFt": 1039.75,
+     "storageKaf": 6961.0,
+     "hooverCapacityMw": 1032.4,
+     "hooverEnergyGwh": 186.5,
+     "unitsAvailablePct": 79.0
+    },
+    {
+     "date": "2027-02-28",
+     "elevationFt": 1041.68,
+     "storageKaf": 7094.0,
+     "hooverCapacityMw": 809.0,
+     "hooverEnergyGwh": 165.3,
+     "unitsAvailablePct": 61.0
+    },
+    {
+     "date": "2027-03-31",
+     "elevationFt": 1037.95,
+     "storageKaf": 6837.0,
+     "hooverCapacityMw": 896.7,
+     "hooverEnergyGwh": 332.3,
+     "unitsAvailablePct": 69.0
+    },
+    {
+     "date": "2027-04-30",
+     "elevationFt": 1031.61,
+     "storageKaf": 6412.0,
+     "hooverCapacityMw": 337.0,
+     "hooverEnergyGwh": 243.5,
+     "unitsAvailablePct": 24.0
+    },
+    {
+     "date": "2027-05-31",
+     "elevationFt": 1023.95,
+     "storageKaf": 5914.0,
+     "hooverCapacityMw": 324.4,
+     "hooverEnergyGwh": 243.0,
+     "unitsAvailablePct": 24.0
+    },
+    {
+     "date": "2027-06-30",
+     "elevationFt": 1018.3,
+     "storageKaf": 5559.0,
+     "hooverCapacityMw": 315.1,
+     "hooverEnergyGwh": 228.0,
+     "unitsAvailablePct": 24.0
+    },
+    {
+     "date": "2027-07-31",
+     "elevationFt": 1016.29,
+     "storageKaf": 5435.0,
+     "hooverCapacityMw": 311.7,
+     "hooverEnergyGwh": 232.2,
+     "unitsAvailablePct": 24.0
+    },
+    {
+     "date": "2027-08-31",
+     "elevationFt": 1016.57,
+     "storageKaf": 5452.0,
+     "hooverCapacityMw": 312.2,
+     "hooverEnergyGwh": 231.9,
+     "unitsAvailablePct": 24.0
+    },
+    {
+     "date": "2027-09-30",
+     "elevationFt": 1015.45,
+     "storageKaf": 5383.0,
+     "hooverCapacityMw": 310.3,
+     "hooverEnergyGwh": 209.8,
+     "unitsAvailablePct": 24.0
+    },
+    {
+     "date": "2027-10-31",
+     "elevationFt": 1015.52,
+     "storageKaf": 5388.0,
+     "hooverCapacityMw": 232.8,
+     "hooverEnergyGwh": 164.9,
+     "unitsAvailablePct": 18.0
+    },
+    {
+     "date": "2027-11-30",
+     "elevationFt": 1014.25,
+     "storageKaf": 5310.0,
+     "hooverCapacityMw": 231.3,
+     "hooverEnergyGwh": 172.0,
+     "unitsAvailablePct": 18.0
+    },
+    {
+     "date": "2027-12-31",
+     "elevationFt": 1015.74,
+     "storageKaf": 5401.0,
+     "hooverCapacityMw": 310.8,
+     "hooverEnergyGwh": 176.8,
+     "unitsAvailablePct": 24.0
+    },
+    {
+     "date": "2028-01-31",
+     "elevationFt": 1020.85,
+     "storageKaf": 5718.0,
+     "hooverCapacityMw": 239.4,
+     "hooverEnergyGwh": 168.9,
+     "unitsAvailablePct": 18.0
+    },
+    {
+     "date": "2028-02-29",
+     "elevationFt": 1024.2,
+     "storageKaf": 5930.0,
+     "hooverCapacityMw": 243.6,
+     "hooverEnergyGwh": 155.2,
+     "unitsAvailablePct": 18.0
+    },
+    {
+     "date": "2028-03-31",
+     "elevationFt": 1022.57,
+     "storageKaf": 5827.0,
+     "hooverCapacityMw": 322.1,
+     "hooverEnergyGwh": 239.0,
+     "unitsAvailablePct": 24.0
+    },
+    {
+     "date": "2028-04-30",
+     "elevationFt": 1018.06,
+     "storageKaf": 5544.0,
+     "hooverCapacityMw": 314.7,
+     "hooverEnergyGwh": 226.5,
+     "unitsAvailablePct": 24.0
+    },
+    {
+     "date": "2028-05-31",
+     "elevationFt": 1013.36,
+     "storageKaf": 5256.0,
+     "hooverCapacityMw": 306.9,
+     "hooverEnergyGwh": 228.4,
+     "unitsAvailablePct": 24.0
+    },
+    {
+     "date": "2028-06-30",
+     "elevationFt": 1009.69,
+     "storageKaf": 5036.0,
+     "hooverCapacityMw": 300.8,
+     "hooverEnergyGwh": 216.7,
+     "unitsAvailablePct": 24.0
+    }
+   ]
+  },
+  {
+   "id": "max",
+   "label": "Probable Maximum",
+   "study": "August 2026",
+   "url": "https://www.usbr.gov/lc/region/g4000/24mo/2026/AUG26_MAX.pdf",
+   "note": "Wet hydrology, exceeded ~10% of the time.",
+   "series": [
+    {
+     "date": "2025-08-31",
+     "elevationFt": 1055.54,
+     "storageKaf": 8088.0,
+     "hooverCapacityMw": 1180.9,
+     "hooverEnergyGwh": 227.3,
+     "unitsAvailablePct": 85.0
+    },
+    {
+     "date": "2025-09-30",
+     "elevationFt": 1057.25,
+     "storageKaf": 8216.0,
+     "hooverCapacityMw": 905.0,
+     "hooverEnergyGwh": 164.7,
+     "unitsAvailablePct": 65.0
+    },
+    {
+     "date": "2025-10-31",
+     "elevationFt": 1057.57,
+     "storageKaf": 8240.0,
+     "hooverCapacityMw": 738.0,
+     "hooverEnergyGwh": 175.7,
+     "unitsAvailablePct": 53.0
+    },
+    {
+     "date": "2025-11-30",
+     "elevationFt": 1058.91,
+     "storageKaf": 8341.0,
+     "hooverCapacityMw": 752.5,
+     "hooverEnergyGwh": 151.8,
+     "unitsAvailablePct": 54.0
+    },
+    {
+     "date": "2025-12-31",
+     "elevationFt": 1062.24,
+     "storageKaf": 8594.0,
+     "hooverCapacityMw": 701.1,
+     "hooverEnergyGwh": 97.0,
+     "unitsAvailablePct": 49.0
+    },
+    {
+     "date": "2026-01-31",
+     "elevationFt": 1065.37,
+     "storageKaf": 8836.0,
+     "hooverCapacityMw": 854.0,
+     "hooverEnergyGwh": 143.3,
+     "unitsAvailablePct": 58.0
+    },
+    {
+     "date": "2026-02-28",
+     "elevationFt": 1066.14,
+     "storageKaf": 8896.0,
+     "hooverCapacityMw": 862.0,
+     "hooverEnergyGwh": 182.4,
+     "unitsAvailablePct": 58.0
+    },
+    {
+     "date": "2026-03-31",
+     "elevationFt": 1062.05,
+     "storageKaf": 8579.0,
+     "hooverCapacityMw": 680.1,
+     "hooverEnergyGwh": 311.8,
+     "unitsAvailablePct": 47.0
+    },
+    {
+     "date": "2026-04-30",
+     "elevationFt": 1056.32,
+     "storageKaf": 8146.0,
+     "hooverCapacityMw": 750.4,
+     "hooverEnergyGwh": 330.6,
+     "unitsAvailablePct": 53.0
+    },
+    {
+     "date": "2026-05-31",
+     "elevationFt": 1050.0,
+     "storageKaf": 7683.0,
+     "hooverCapacityMw": 1007.8,
+     "hooverEnergyGwh": 324.2,
+     "unitsAvailablePct": 73.0
+    },
+    {
+     "date": "2026-06-30",
+     "elevationFt": 1044.58,
+     "storageKaf": 7296.0,
+     "hooverCapacityMw": 1312.1,
+     "hooverEnergyGwh": 298.3,
+     "unitsAvailablePct": 97.0
+    },
+    {
+     "date": "2026-07-31",
+     "elevationFt": 1041.1,
+     "storageKaf": 7054.0,
+     "hooverCapacityMw": 1287.9,
+     "hooverEnergyGwh": 251.5,
+     "unitsAvailablePct": 97.0
+    },
+    {
+     "date": "2026-08-31",
+     "elevationFt": 1040.07,
+     "storageKaf": 6983.0,
+     "hooverCapacityMw": 1275.3,
+     "hooverEnergyGwh": 203.7,
+     "unitsAvailablePct": 97.0
+    },
+    {
+     "date": "2026-09-30",
+     "elevationFt": 1038.86,
+     "storageKaf": 6899.0,
+     "hooverCapacityMw": 1097.3,
+     "hooverEnergyGwh": 204.6,
+     "unitsAvailablePct": 85.0
+    },
+    {
+     "date": "2026-10-31",
+     "elevationFt": 1038.1,
+     "storageKaf": 6847.0,
+     "hooverCapacityMw": 762.6,
+     "hooverEnergyGwh": 169.3,
+     "unitsAvailablePct": 59.0
+    },
+    {
+     "date": "2026-11-30",
+     "elevationFt": 1036.2,
+     "storageKaf": 6719.0,
+     "hooverCapacityMw": 751.8,
+     "hooverEnergyGwh": 187.0,
+     "unitsAvailablePct": 59.0
+    },
+    {
+     "date": "2026-12-31",
+     "elevationFt": 1035.63,
+     "storageKaf": 6680.0,
+     "hooverCapacityMw": 1191.9,
+     "hooverEnergyGwh": 165.4,
+     "unitsAvailablePct": 92.0
+    },
+    {
+     "date": "2027-01-31",
+     "elevationFt": 1035.63,
+     "storageKaf": 6680.0,
+     "hooverCapacityMw": 1032.4,
+     "hooverEnergyGwh": 156.7,
+     "unitsAvailablePct": 79.0
+    },
+    {
+     "date": "2027-02-28",
+     "elevationFt": 1034.93,
+     "storageKaf": 6633.0,
+     "hooverCapacityMw": 809.0,
+     "hooverEnergyGwh": 159.6,
+     "unitsAvailablePct": 61.0
+    },
+    {
+     "date": "2027-03-31",
+     "elevationFt": 1029.2,
+     "storageKaf": 6253.0,
+     "hooverCapacityMw": 225.2,
+     "hooverEnergyGwh": 322.5,
+     "unitsAvailablePct": 69.0
+    },
+    {
+     "date": "2027-04-30",
+     "elevationFt": 1022.16,
+     "storageKaf": 5801.0,
+     "hooverCapacityMw": 321.4,
+     "hooverEnergyGwh": 232.9,
+     "unitsAvailablePct": 24.0
+    },
+    {
+     "date": "2027-05-31",
+     "elevationFt": 1019.02,
+     "storageKaf": 5603.0,
+     "hooverCapacityMw": 316.2,
+     "hooverEnergyGwh": 234.4,
+     "unitsAvailablePct": 24.0
+    },
+    {
+     "date": "2027-06-30",
+     "elevationFt": 1018.43,
+     "storageKaf": 5567.0,
+     "hooverCapacityMw": 315.3,
+     "hooverEnergyGwh": 225.4,
+     "unitsAvailablePct": 24.0
+    },
+    {
+     "date": "2027-07-31",
+     "elevationFt": 1021.37,
+     "storageKaf": 5750.0,
+     "hooverCapacityMw": 320.1,
+     "hooverEnergyGwh": 235.6,
+     "unitsAvailablePct": 24.0
+    },
+    {
+     "date": "2027-08-31",
+     "elevationFt": 1027.48,
+     "storageKaf": 6141.0,
+     "hooverCapacityMw": 91.6,
+     "hooverEnergyGwh": 69.0,
+     "unitsAvailablePct": 29.0
+    },
+    {
+     "date": "2027-09-30",
+     "elevationFt": 1030.67,
+     "storageKaf": 6349.0,
+     "hooverCapacityMw": 92.4,
+     "hooverEnergyGwh": 197.4,
+     "unitsAvailablePct": 29.0
+    },
+    {
+     "date": "2027-10-31",
+     "elevationFt": 1036.06,
+     "storageKaf": 6709.0,
+     "hooverCapacityMw": 72.2,
+     "hooverEnergyGwh": 151.7,
+     "unitsAvailablePct": 22.0
+    },
+    {
+     "date": "2027-11-30",
+     "elevationFt": 1040.81,
+     "storageKaf": 7033.0,
+     "hooverCapacityMw": 71.7,
+     "hooverEnergyGwh": 191.7,
+     "unitsAvailablePct": 22.0
+    },
+    {
+     "date": "2027-12-31",
+     "elevationFt": 1047.66,
+     "storageKaf": 7515.0,
+     "hooverCapacityMw": 72.0,
+     "hooverEnergyGwh": 177.4,
+     "unitsAvailablePct": 22.0
+    },
+    {
+     "date": "2028-01-31",
+     "elevationFt": 1055.37,
+     "storageKaf": 8076.0,
+     "hooverCapacityMw": 1098.7,
+     "hooverEnergyGwh": 161.6,
+     "unitsAvailablePct": 78.0
+    },
+    {
+     "date": "2028-02-29",
+     "elevationFt": 1059.11,
+     "storageKaf": 8356.0,
+     "hooverCapacityMw": 1218.8,
+     "hooverEnergyGwh": 163.5,
+     "unitsAvailablePct": 85.0
+    },
+    {
+     "date": "2028-03-31",
+     "elevationFt": 1059.85,
+     "storageKaf": 8412.0,
+     "hooverCapacityMw": 1128.3,
+     "hooverEnergyGwh": 336.2,
+     "unitsAvailablePct": 79.0
+    },
+    {
+     "date": "2028-04-30",
+     "elevationFt": 1058.14,
+     "storageKaf": 8283.0,
+     "hooverCapacityMw": 1121.3,
+     "hooverEnergyGwh": 372.5,
+     "unitsAvailablePct": 79.0
+    },
+    {
+     "date": "2028-05-31",
+     "elevationFt": 1055.72,
+     "storageKaf": 8101.0,
+     "hooverCapacityMw": 1336.7,
+     "hooverEnergyGwh": 371.0,
+     "unitsAvailablePct": 95.0
+    },
+    {
+     "date": "2028-06-30",
+     "elevationFt": 1056.53,
+     "storageKaf": 8162.0,
+     "hooverCapacityMw": 1380.9,
+     "hooverEnergyGwh": 315.7,
+     "unitsAvailablePct": 97.0
+    },
+    {
+     "date": "2028-07-31",
+     "elevationFt": 1062.03,
+     "storageKaf": 8578.0,
+     "hooverCapacityMw": 1410.7,
+     "hooverEnergyGwh": 262.3,
+     "unitsAvailablePct": 97.0
+    }
+   ]
+  }
+ ],
+ "pointForecasts": [
+  {
+   "date": "2026-12-31",
+   "elevationFt": 1034.18,
+   "label": "September 2026 Most Probable (Dec 31, 2026)",
+   "url": "https://www.usbr.gov/lc/region/g4000/24mo/2026/September-Chart.pdf"
+  }
+ ]
+}

@@ -1,0 +1,33 @@
+{
+  "name": "mead-watch",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "node tests/smoke.mjs",
+    "data": "npm run data:levels && npm run data:regions",
+    "data:levels": "node scripts/fetch_levels.mjs",
+    "data:regions": "node scripts/build_regions.mjs",
+    "data:forecast": "python3 scripts/extract_24ms.py",
+    "data:bathymetry": "python3 scripts/build_bathymetry.py"
+  },
+  "dependencies": {
+    "d3": "^7.9.0",
+    "maplibre-gl": "^5.12.0"
+  },
+  "devDependencies": {
+    "@turf/bbox-clip": "^7.4.0",
+    "@turf/helpers": "^7.4.0",
+    "@turf/simplify": "^7.4.0",
+    "@turf/union": "^7.4.0",
+    "@types/d3": "^7.4.3",
+    "playwright": "^1.63.0",
+    "topojson-client": "^3.1.0",
+    "typescript": "^5.9.3",
+    "us-atlas": "^3.0.1",
+    "vite": "^7.2.0"
+  }
+}

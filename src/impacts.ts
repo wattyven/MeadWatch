@@ -1,0 +1,334 @@
+// How a given Lake Mead elevation translates into water and power impacts.
+//
+// Two layers:
+//  1. Policy: the shortage schedule that applies for the operating year, keyed
+//     to Lake Mead's (projected) January 1 elevation.
+//       - 2007 Interim Guidelines + 2019 Drought Contingency Plan + IBWC Minute 323
+//         (governed operations through 2026)
+//       - 2027–2028 Operating Guidelines (Aug 2026 ROD): a flat 1.25 MAF Lower
+//         Basin reduction with consultation if Mead is projected below 1,010 ft.
+//  2. Physics: what the dam and intakes can physically do at the current
+//     elevation (Hoover generating capacity, minimum power pool, dead pool,
+//     SNWA intake depths).
+//
+// Splitting state-level reductions among water users is simplified and
+// illustrative (see the per-region `basis` notes); it is not an official
+// allocation.
+
+import {DEAD_POOL, MIN_POWER_POOL} from './data';
+
+export type Regime = '2007' | '2027';
+
+export interface Shortage {
+    regime: Regime;
+    tier: string;
+    az: number;
+    ca: number;
+    nv: number;
+    mx: number | null;
+    consult: string | null;
+}
+
+const T2007: {above: number; tier: string; az: number; nv: number; ca: number; mx: number}[] = [
+    {above: 1090, tier: 'Normal', az: 0, nv: 0, ca: 0, mx: 0},
+    {above: 1075, tier: 'Tier 0', az: 192_000, nv: 8_000, ca: 0, mx: 41_000},
+    {above: 1050, tier: 'Tier 1', az: 512_000, nv: 21_000, ca: 0, mx: 80_000},
+    {above: 1045, tier: 'Tier 2a', az: 592_000, nv: 25_000, ca: 0, mx: 104_000},
+    {above: 1040, tier: 'Tier 2b', az: 640_000, nv: 27_000, ca: 200_000, mx: 146_000},
+    {above: 1035, tier: 'Tier 2b', az: 640_000, nv: 27_000, ca: 250_000, mx: 154_000},
+    {above: 1030, tier: 'Tier 2b', az: 640_000, nv: 27_000, ca: 300_000, mx: 161_000},
+    {above: 1025, tier: 'Tier 2b', az: 640_000, nv: 27_000, ca: 350_000, mx: 168_000},
+    {above: -Infinity, tier: 'Tier 3', az: 720_000, nv: 30_000, ca: 350_000, mx: 275_000}
+];
+
+/**
+ * Tiers Reclamation actually declared (from each August 24-Month Study's
+ * projection of January 1), which can differ from the elevation observed on
+ * December 31 -- e.g. 2023 was declared Tier 2a although Mead ended 2022 at 1,044.8 ft.
+ */
+export const DECLARED_TIERS: Record<number, string> = {
+    2021: 'Tier 0', 2022: 'Tier 1', 2023: 'Tier 2a', 2024: 'Tier 1', 2025: 'Tier 1', 2026: 'Tier 1'
+};
+
+export interface ShortageOptions {
+    /** use this declared 2007-rules tier instead of deriving it from the elevation */
+    declaredTier?: string;
+    /** lowest Most Probable elevation in the next 12 months (2027–28 consultation trigger) */
+    lookaheadMin?: number;
+}
+
+export function shortageFor(regime: Regime, jan1Elevation: number, opts: ShortageOptions = {}): Shortage {
+    if (regime === '2027') {
+        const low = opts.lookaheadMin ?? jan1Elevation;
+        return {
+            regime,
+            tier: 'Shortage Condition',
+            az: 760_000,
+            ca: 440_000,
+            nv: 50_000,
+            mx: null,
+            consult: low < 1010
+                ? 'Projected below 1,010 ft within 12 months: Interior must consult the Basin States and Tribes on further actions.'
+                : jan1Elevation >= 1125
+                    ? 'Projected at or above 1,125 ft: consultation on increasing apportionments.'
+                    : null
+        };
+    }
+    // Normal and Tier 0 start strictly above their bound (Tier 1 is "at or below 1,075");
+    // the deeper tiers include their lower bound.
+    const row = (opts.declaredTier && T2007.find(r => r.tier === opts.declaredTier))
+        || T2007.find((r, i) => (i <= 1 ? jan1Elevation > r.above : jan1Elevation >= r.above))!;
+    return {
+        regime,
+        tier: row.tier,
+        az: row.az,
+        ca: row.ca,
+        nv: row.nv,
+        mx: row.mx,
+        consult: jan1Elevation < 1025
+            ? 'Below 1,025 ft: Interior consults on additional measures to keep Mead above 1,000 ft.'
+            : jan1Elevation < 1030
+                ? 'Below 1,030 ft: DCP requires consultation on further protective actions.'
+                : null
+    };
+}
+
+export const regimeLabel: Record<Regime, string> = {
+    '2007': '2007 Interim Guidelines + 2019 DCP',
+    '2027': '2027–28 Operating Guidelines'
+};
+
+/** Hoover Dam nameplate 2,080 MW. Effective capacity falls with head; nothing below 950 ft. */
+export const HOOVER_NAMEPLATE = 2080;
+export function hooverCapacityMw(h: number) {
+    if (h < MIN_POWER_POOL) return 0;
+    const head = Math.min(1, Math.max(0, (h - 646) / (1229 - 646)));
+    return HOOVER_NAMEPLATE * Math.pow(head, 1.15);
+}
+
+export interface Threshold {
+    elevation: number;
+    short: string;
+    label: string;
+    kind: 'policy' | 'infra' | 'power' | 'limit';
+}
+
+export const THRESHOLDS: Threshold[] = [
+    {elevation: 1229, short: 'Full pool', label: 'Full pool', kind: 'limit'},
+    {elevation: 1090, short: 'Tier 0', label: 'DCP contributions begin (2007/2019 rules)', kind: 'policy'},
+    {elevation: 1075, short: 'Tier 1', label: 'Tier 1 shortage (2007 rules)', kind: 'policy'},
+    {elevation: 1050, short: 'Tier 2a · Intake 1', label: 'Tier 2a shortage; SNWA Intake 1 out of water', kind: 'policy'},
+    {elevation: 1045, short: 'Tier 2b', label: 'Tier 2b: California reductions begin (2007 rules)', kind: 'policy'},
+    {elevation: 1025, short: 'Tier 3', label: 'Tier 3 shortage (2007 rules)', kind: 'policy'},
+    {elevation: 1010, short: 'Consultation', label: 'Basin-wide consultation trigger (2027–28 rules)', kind: 'policy'},
+    {elevation: 1000, short: 'Intake 2', label: 'SNWA Intake 2 out of water', kind: 'infra'},
+    {elevation: 950, short: 'Min. power pool', label: 'Minimum power pool: Hoover stops generating', kind: 'power'},
+    {elevation: 895, short: 'Dead pool', label: 'Dead pool: no water can be released past Hoover Dam', kind: 'limit'},
+    {elevation: 875, short: 'SNWA pumping limit', label: 'SNWA low-lake-level pumping station limit', kind: 'infra'}
+];
+
+// ---------------------------------------------------------------------------
+// Regions
+
+export interface RegionInfo {
+    id: string;
+    name: string;
+    short: string;
+    kind: 'city' | 'farm' | 'mixed' | 'intl';
+    state: string;
+    population: number;
+    acres: number;
+    /** Normal annual Colorado River supply relevant to this region, acre-feet */
+    supplyAf: number;
+    /** Share of the region's total water that comes from the Colorado via Mead */
+    dependence: string;
+    hooverShare?: string;
+    basis: string;
+    blurb: string;
+    center: [number, number];
+    zoom: number;
+}
+
+export const REGIONS: RegionInfo[] = [
+    {
+        id: 'lv', name: 'Las Vegas Valley', short: 'Las Vegas', kind: 'city', state: 'NV',
+        population: 2_400_000, acres: 0, supplyAf: 300_000, dependence: '~90% of supply pumped straight from Lake Mead',
+        hooverShare: 'Nevada holds ~23% of Hoover power',
+        basis: 'Nevada reduction ÷ Nevada’s 300,000 AF apportionment; intake depths from SNWA.',
+        blurb: 'Southern Nevada Water Authority draws from three intakes in Boulder Basin. Intake 1 sits at 1,050 ft, Intake 2 at 1,000 ft. The “third straw” Intake 3 (860 ft) and its low-lake-level pumping station keep water flowing down to ~875 ft.',
+        center: [-115.1, 36.15], zoom: 9.5
+    },
+    {
+        id: 'phx', name: 'Phoenix & Tucson (CAP cities and tribes)', short: 'Phoenix · Tucson', kind: 'city', state: 'AZ',
+        population: 5_900_000, acres: 0, supplyAf: 1_000_000, dependence: 'CAP is ~40% of Arizona’s water use; Tucson relies on it almost entirely',
+        hooverShare: 'Arizona holds ~19% of Hoover power',
+        basis: 'Arizona reduction beyond the first 512,000 AF (absorbed by CAP agriculture and excess pools) ÷ ~1.0 MAF CAP municipal + tribal deliveries.',
+        blurb: 'The 336-mile Central Arizona Project lifts water ~2,900 ft from Lake Havasu to Phoenix and Tucson. CAP holds junior priority, so Arizona’s cuts land on it first.',
+        center: [-111.8, 33.0], zoom: 7.4
+    },
+    {
+        id: 'pinal', name: 'Central Arizona farms (Pinal County)', short: 'Pinal farms', kind: 'farm', state: 'AZ',
+        population: 0, acres: 300_000, supplyAf: 300_000, dependence: 'CAP water was the main surface supply; now largely groundwater',
+        basis: 'CAP agricultural pool is the first to be eliminated: Arizona reduction ÷ 512,000 AF (Tier 1 eliminates it).',
+        blurb: 'Cotton, alfalfa and dairy feed farms that lost most of their CAP water when Tier 1 began in 2022, and are fallowing fields or pumping groundwater.',
+        center: [-111.75, 32.87], zoom: 8.6
+    },
+    {
+        id: 'socal', name: 'Southern California (Metropolitan Water District)', short: 'Southern California', kind: 'city', state: 'CA',
+        population: 19_000_000, acres: 0, supplyAf: 950_000, dependence: 'Colorado River Aqueduct supplies ~25–30% of the region',
+        hooverShare: 'MWD, LADWP, SCE and cities hold ~57% of Hoover power; MWD uses it to pump the aqueduct',
+        basis: 'Illustrative: 60% of California’s reduction ÷ ~950,000 AF Colorado River Aqueduct deliveries.',
+        blurb: 'Metropolitan pumps Lake Havasu water 242 miles over the desert to 26 member agencies from Ventura to San Diego.',
+        center: [-117.6, 33.95], zoom: 7.3
+    },
+    {
+        id: 'iid', name: 'Imperial Valley (IID)', short: 'Imperial Valley', kind: 'farm', state: 'CA',
+        population: 180_000, acres: 475_000, supplyAf: 2_500_000, dependence: 'Colorado River is the only source of water',
+        basis: 'Illustrative: 30% of California’s reduction ÷ ~2.5 MAF IID use. IID holds senior (1901) rights.',
+        blurb: 'The largest single user of Colorado River water. The All-American Canal carries ~2.5 MAF a year to winter vegetables, alfalfa and cattle feed.',
+        center: [-115.55, 32.95], zoom: 8.7
+    },
+    {
+        id: 'cvwd', name: 'Coachella Valley', short: 'Coachella', kind: 'mixed', state: 'CA',
+        population: 450_000, acres: 70_000, supplyAf: 350_000, dependence: 'Coachella Canal supplies most farm water and recharges the aquifer',
+        basis: 'Illustrative: 7% of California’s reduction ÷ ~350,000 AF CVWD use.',
+        blurb: 'Dates, citrus, grapes and table vegetables, plus Palm Springs-area cities that recharge their aquifer with Colorado River water.',
+        center: [-116.2, 33.65], zoom: 8.8
+    },
+    {
+        id: 'pvid', name: 'Palo Verde Valley', short: 'Palo Verde', kind: 'farm', state: 'CA',
+        population: 20_000, acres: 104_000, supplyAf: 400_000, dependence: 'Colorado River is the only source',
+        basis: 'Illustrative: 3% of California’s reduction ÷ ~400,000 AF. Holds 1877 senior rights; mostly paid fallowing.',
+        blurb: 'Alfalfa and hay around Blythe, irrigated by gravity from the river under some of the oldest rights on the Colorado.',
+        center: [-114.62, 33.58], zoom: 9.5
+    },
+    {
+        id: 'crit', name: 'Colorado River Indian Tribes', short: 'CRIT', kind: 'farm', state: 'AZ',
+        population: 9_000, acres: 79_000, supplyAf: 660_000, dependence: 'Decreed (1865-priority) Colorado River rights',
+        basis: 'Senior present-perfected rights: no scheduled reductions; exposed only when releases are physically limited.',
+        blurb: 'The Mohave, Chemehuevi, Hopi and Navajo people of the Parker Valley farm ~79,000 acres under some of the most senior rights on the river.',
+        center: [-114.35, 34.0], zoom: 9.6
+    },
+    {
+        id: 'yuma', name: 'Yuma & Gila valleys', short: 'Yuma', kind: 'mixed', state: 'AZ',
+        population: 210_000, acres: 230_000, supplyAf: 1_000_000, dependence: 'Colorado River is the only source',
+        basis: 'Arizona’s senior mainstem priorities (pre-1968): no scheduled reductions; exposed only when releases are physically limited.',
+        blurb: 'Grows most of America’s winter lettuce and leafy greens. Senior rights shield Yuma from shortage tiers, but every drop must still pass Hoover Dam.',
+        center: [-114.4, 32.72], zoom: 9
+    },
+    {
+        id: 'mexico', name: 'Mexicali Valley & Tijuana (Mexico)', short: 'Mexico', kind: 'intl', state: 'MX',
+        population: 3_000_000, acres: 500_000, supplyAf: 1_500_000, dependence: '1.5 MAF a year under the 1944 Treaty',
+        basis: 'Minute 323 reductions under 2007 rules; Minute 334 (Sept 2026) terms are not modeled here.',
+        blurb: 'Mexico receives water at Morelos Dam below Yuma. Reductions are negotiated through the International Boundary and Water Commission.',
+        center: [-115.2, 32.35], zoom: 8.5
+    }
+];
+
+export const US_REGIONS = REGIONS.filter(r => r.kind !== 'intl');
+
+export interface RegionImpact {
+    id: string;
+    severity: number | null;
+    cutAf: number | null;
+    cutFrac: number | null;
+    powerLossFrac: number | null;
+    physical: string | null;
+    /** 0..1 physical supply risk (dam/intake limits), independent of policy */
+    physSev: number;
+    /** true when the region faces a scheduled water cut or a physical supply risk */
+    waterAffected: boolean;
+    status: string;
+    short: string;
+}
+
+const CA_SPLIT: Record<string, number> = {socal: 0.6, iid: 0.3, cvwd: 0.07, pvid: 0.03};
+
+function physicalRisk(h: number): {sev: number; note: string | null} {
+    if (h <= DEAD_POOL) return {sev: 1, note: 'Dead pool: no water can be released past Hoover Dam'};
+    if (h < MIN_POWER_POOL) return {sev: 0.6, note: 'Releases limited to the outlet works; downstream deliveries severely constrained'};
+    return {sev: 0, note: null};
+}
+
+export function regionImpacts(h: number, s: Shortage): RegionImpact[] {
+    const powerLoss = 1 - hooverCapacityMw(h) / HOOVER_NAMEPLATE;
+    const phys = physicalRisk(h);
+    return REGIONS.map(r => {
+        let cut: number | null = 0;
+        let physical = phys.note;
+        let physSev = phys.sev;
+        switch (r.id) {
+            case 'lv': {
+                cut = s.nv;
+                // Las Vegas pumps from the lake itself, so dead pool does not cut it off.
+                physSev = 0;
+                physical = null;
+                if (h < 875) {physSev = 1; physical = 'Below the low-lake-level pumping station: SNWA cannot draw water';}
+                else if (h < 1000) {physSev = 0.3; physical = 'Only Intake 3, the “third straw”, still reaches water';}
+                else if (h < 1050) {physical = 'Intake 1 is out of the water';}
+                break;
+            }
+            case 'phx': cut = Math.max(0, s.az - 512_000); break;
+            case 'pinal': cut = Math.min(s.az, 512_000) / 512_000 * r.supplyAf; break;
+            case 'socal': case 'iid': case 'cvwd': case 'pvid': cut = s.ca * CA_SPLIT[r.id]; break;
+            case 'crit': case 'yuma': cut = 0; break;
+            case 'mexico': cut = s.mx; break;
+        }
+        const cutFrac = cut === null ? null : Math.min(1, cut / r.supplyAf);
+        const pl = r.hooverShare ? powerLoss : null;
+        let severity: number | null = cutFrac === null ? null : Math.max(cutFrac, (pl ?? 0) * 0.5, physSev);
+        if (cutFrac === null && physSev > 0) severity = physSev;
+
+        const pct = cutFrac ? Math.round(cutFrac * 100) : 0;
+        const parts: string[] = [];
+        let short: string;
+        if (severity === null) {
+            parts.push('Reductions set by IBWC Minute 334 (not modeled)');
+            short = 'Minute 334';
+        } else if (physSev >= 1) {
+            parts.push(physical!);
+            short = 'No supply';
+        } else {
+            if (cut && cutFrac! > 0.005) parts.push(`−${fmtAf(cut)} AF/yr (${pct}% of its river water)`);
+            if (physical) parts.push(physical);
+            if (!parts.length) parts.push(r.id === 'crit' || r.id === 'yuma' ? 'Senior rights: no scheduled cuts' : 'No scheduled water cut');
+            if (pl !== null && pl > 0.02) parts.push(`Hoover power −${Math.round(pl * 100)}%`);
+            short = cut && cutFrac! > 0.005 ? `−${pct}% river water`
+                : physSev > 0 ? 'Supply at risk'
+                    : pl !== null && pl > 0.05 ? `Hoover power −${Math.round(pl * 100)}%` : 'No cut';
+        }
+        const waterAffected = (cutFrac ?? 0) >= 0.02 || physSev > 0;
+        return {id: r.id, severity, cutAf: cut, cutFrac, powerLossFrac: pl, physical, physSev, waterAffected, status: parts.join(' · '), short};
+    });
+}
+
+export function fmtAf(v: number) {
+    if (v >= 1e6) return (v / 1e6).toFixed(2).replace(/\.?0+$/, '') + 'M';
+    if (v >= 1e3) return Math.round(v / 1e3) + 'k';
+    return String(Math.round(v));
+}
+
+export const SEVERITY_STOPS: [number, string][] = [
+    [0, '#4fb39a'],
+    [0.05, '#b9d36c'],
+    [0.15, '#f2c94c'],
+    [0.3, '#f2994a'],
+    [0.5, '#e0533d'],
+    [0.8, '#9b1d3a']
+];
+
+export function severityColor(s: number | null): string {
+    if (s === null) return '#8a94a6';
+    for (let i = SEVERITY_STOPS.length - 1; i >= 0; i--) if (s >= SEVERITY_STOPS[i][0]) return SEVERITY_STOPS[i][1];
+    return SEVERITY_STOPS[0][1];
+}
+
+export function severityLabel(s: number | null): string {
+    if (s === null) return 'Not modeled';
+    if (s >= 0.8) return 'Critical';
+    if (s >= 0.5) return 'Severe';
+    if (s >= 0.3) return 'High';
+    if (s >= 0.15) return 'Moderate';
+    if (s >= 0.05) return 'Low';
+    return 'Minimal';
+}
