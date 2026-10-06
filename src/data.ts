@@ -8,12 +8,14 @@ export interface DailyData {
     recordHigh: {date: string; elevation: number};
     firstDate: string;
     rows: [string, number, number | null, number | null][];
+    downstream?: {mohave: [string, number][]; havasu: [string, number][]};
 }
 
 export interface ForecastPoint {
     date: string;
     elevationFt: number;
     storageKaf: number;
+    releaseKaf?: number;
     hooverCapacityMw?: number;
 }
 
@@ -61,6 +63,10 @@ export interface AppData {
     observed: Series;
     lastObserved: {date: string; t: number; elevation: number; storage: number};
     scenarioSeries: Record<ScenarioId, Series>;
+    /** daily Hoover release (cfs), observed */
+    release: Series;
+    mohave: Series;
+    havasu: Series;
     /** USBR live storage / bathymetry-derived live storage at the latest observation */
     storageCalibration: number;
 }
@@ -108,8 +114,17 @@ export async function loadData(): Promise<AppData> {
         scenarioSeries[s.id] = {t, v};
     }
 
+    const release: Series = {t: [], v: []};
+    for (const [d, , , r] of daily.rows) {
+        if (r === null) continue;
+        release.t.push(toT(d));
+        release.v.push(r);
+    }
+    const toSeries = (rows: [string, number][] = []): Series => ({t: rows.map(r => toT(r[0])), v: rows.map(r => r[1])});
+
     const app: AppData = {
-        daily, forecast, meta, regions, observed, lastObserved, scenarioSeries, storageCalibration: 1
+        daily, forecast, meta, regions, observed, lastObserved, scenarioSeries, storageCalibration: 1,
+        release, mohave: toSeries(daily.downstream?.mohave), havasu: toSeries(daily.downstream?.havasu)
     };
     const derived = rawLiveStorageAf(app, lastObserved.elevation);
     if (Number.isFinite(lastObserved.storage) && derived > 0) app.storageCalibration = lastObserved.storage / derived;
@@ -133,6 +148,35 @@ export function sample(s: Series, t: number): number {
 export function elevationAt(app: AppData, t: number, scenario: ScenarioId): number {
     if (t <= app.lastObserved.t) return sample(app.observed, t);
     return sample(app.scenarioSeries[scenario], t);
+}
+
+const AF_PER_CFS_DAY = 1.98347;
+
+/**
+ * Hoover Dam release over the 365 days ending at t, in MAF: observed daily
+ * releases where available, then the scenario's 24-Month Study monthly releases.
+ */
+export function hooverReleaseMaf(app: AppData, t: number, scenario: ScenarioId): number | null {
+    const start = t - 365 * DAY;
+    if (!app.release.t.length || start < app.release.t[0]) return null;
+    let af = 0;
+    const lastObs = app.release.t[app.release.t.length - 1];
+    for (let i = 0; i < app.release.t.length; i++) {
+        const d = app.release.t[i];
+        if (d > start && d <= t) af += app.release.v[i] * AF_PER_CFS_DAY;
+    }
+    if (t > lastObs) {
+        const sc = app.forecast.scenarios.find(x => x.id === scenario)!;
+        for (const p of sc.series) {
+            if (p.releaseKaf === undefined) continue;
+            const end = toT(p.date), days = new Date(end).getUTCDate();
+            const begin = end - days * DAY;
+            // overlap of this month with (max(start, lastObs), t]
+            const lo = Math.max(begin, start, lastObs), hi = Math.min(end, t);
+            if (hi > lo) af += p.releaseKaf * 1000 * (hi - lo) / (days * DAY);
+        }
+    }
+    return af / 1e6;
 }
 
 export function isForecast(app: AppData, t: number) {

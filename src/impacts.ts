@@ -332,3 +332,84 @@ export function severityLabel(s: number | null): string {
     if (s >= 0.05) return 'Low';
     return 'Minimal';
 }
+
+// ---------------------------------------------------------------------------
+// Downstream flows
+//
+// Lake Mead's elevation reaches the river and canals two ways: the shortage
+// schedule cuts the water ordered from Hoover Dam, and below 950 ft (outlet
+// works only) and 895 ft (dead pool) the dam physically can't release it.
+// Normal deliveries are rounded recent pre-shortage figures (est.); they sum to
+// a ~9.0 MAF Hoover release, close to the 8.5–9.2 MAF released in 2019–2021.
+
+export interface Flow {
+    id: 'r1' | 'r2' | 'r3' | 'cap' | 'cra' | 'aac' | 'coachella';
+    name: string;
+    short: string;
+    maf: number;
+    normal: number;
+    ratio: number;
+    dry: boolean;
+    note: string | null;
+    observed: boolean;
+}
+
+export const NORMAL_FLOW = {cap: 1.5, cra: 1.0, aac: 2.6, coachella: 0.3, valley: 0.9, yuma: 0.8, mexico: 1.5};
+const LOSS_R1 = 0.4; // mainstem users and evaporation between Hoover and Parker dams
+const LOSS_R2 = 0.3; // riparian use and evaporation between Parker and Imperial dams
+
+export function downstreamFlows(h: number, s: Shortage, observedHooverMaf: number | null): Flow[] {
+    const az = s.az / 1e6, ca = s.ca / 1e6, mx = (s.mx ?? 0) / 1e6;
+    const dead = h <= DEAD_POOL;
+    const limited = !dead && h < MIN_POWER_POOL;
+    const cap = Math.max(0, NORMAL_FLOW.cap - Math.min(az, NORMAL_FLOW.cap));
+    const cra = Math.max(0, NORMAL_FLOW.cra - CA_SPLIT.socal * ca);
+    const coachella = Math.max(0, NORMAL_FLOW.coachella - CA_SPLIT.cvwd * ca);
+    const aac = Math.max(0, NORMAL_FLOW.aac - (CA_SPLIT.iid + CA_SPLIT.cvwd) * ca);
+    const valley = Math.max(0, NORMAL_FLOW.valley - CA_SPLIT.pvid * ca);
+    const r3 = NORMAL_FLOW.yuma + Math.max(0, NORMAL_FLOW.mexico - mx);
+    const r2 = valley + LOSS_R2 + aac + r3;
+    let r1 = r2 + cap + cra + LOSS_R1;
+    const n3 = NORMAL_FLOW.yuma + NORMAL_FLOW.mexico;
+    const n2 = NORMAL_FLOW.valley + LOSS_R2 + NORMAL_FLOW.aac + n3;
+    const n1 = n2 + NORMAL_FLOW.cap + NORMAL_FLOW.cra + LOSS_R1;
+    const observed = observedHooverMaf !== null && !dead;
+    if (observed) r1 = observedHooverMaf!;
+
+    const note = dead ? 'Dead pool: no water passes Hoover Dam'
+        : limited ? 'Below 950 ft: releases limited to the outlet works; scheduled flow may not be deliverable' : null;
+    const mk = (id: Flow['id'], name: string, short: string, maf: number, normal: number, obs = false): Flow => {
+        const v = dead ? 0 : maf;
+        return {id, name, short, maf: v, normal, ratio: normal ? v / normal : 0, dry: dead || v < 0.01, note, observed: obs};
+    };
+    return [
+        mk('r1', 'Colorado River below Hoover Dam', 'Below Hoover', r1, n1, observed),
+        mk('cap', 'Central Arizona Project canal', 'CAP canal', cap, NORMAL_FLOW.cap),
+        mk('cra', 'Colorado River Aqueduct', 'Colorado River Aqueduct', cra, NORMAL_FLOW.cra),
+        mk('r2', 'Colorado River below Parker Dam', 'Below Parker', r2, n2),
+        mk('aac', 'All-American Canal', 'All-American Canal', aac, NORMAL_FLOW.aac),
+        mk('coachella', 'Coachella Canal', 'Coachella Canal', coachella, NORMAL_FLOW.coachella),
+        mk('r3', 'Colorado River below Imperial Dam (to Yuma & Mexico)', 'Below Imperial', r3, n3)
+    ];
+}
+
+export interface DownstreamLake {
+    name: string;
+    dam: string;
+    elevation: number | null;
+    range: [number, number];
+    status: string;
+}
+
+/** Lakes Mohave and Havasu are run within narrow ranges while Hoover keeps releasing. */
+export function downstreamLakes(h: number, mohave: number | null, havasu: number | null, isObserved: boolean): DownstreamLake[] {
+    const dead = h <= DEAD_POOL;
+    const status = (lvl: number | null, [lo, hi]: [number, number]) =>
+        dead ? 'No inflow from Hoover: would be drawn down as downstream users keep diverting'
+            : !isObserved ? 'Held within its normal operating range by dam operations'
+                : lvl === null ? 'No reading' : lvl >= lo && lvl <= hi ? 'Within normal operating range' : 'Outside normal operating range';
+    return [
+        {name: 'Lake Mohave', dam: 'Davis Dam', elevation: mohave, range: [630, 647], status: status(mohave, [630, 647])},
+        {name: 'Lake Havasu', dam: 'Parker Dam', elevation: havasu, range: [440, 450], status: status(havasu, [440, 450])}
+    ];
+}

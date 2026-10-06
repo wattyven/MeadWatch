@@ -15,7 +15,9 @@ terrain tiles use) and three products are written to public/data:
                    when the lake surface is above W. W is the minimax path
                    elevation from Hoover Dam, so pools cut off from the main lake
                    by a sill stay dry. 0xFFFF = never part of the lake.
-  mead_ring.png    RGBA overlay of the full-pool footprint (exposed-lakebed tint).
+  mead_ring.webp   RGBA overlay of the full-pool footprint: hillshaded exposed lakebed
+                   with 10 ft banding.
+  mead_contours.geojson  shorelines at full pool and key operating thresholds.
   mead_meta.json   grid placement, encodings and an elevation-area-capacity curve.
 
 Usage:  python scripts/build_bathymetry.py [path/to/present30m.asc]
@@ -177,15 +179,54 @@ def main():
     fr[~replace] = 0
     Image.fromarray(fr, "RGB").save(os.path.join(OUT, "mead_floor.png"), optimize=True)
 
-    # mead_ring.png: exposed-lakebed tint, banded every 10 ft of exposure elevation.
+    # mead_ring.webp: exposed lakebed. A pale "mineral" white that reads against the
+    # warm desert basemap, banded every 10 ft of exposure elevation with a fine line
+    # every 50 ft (the bathtub ring), and hillshaded from the lake floor so the
+    # drained canyons keep their relief.
+    m_px = (40075016.686 / WORLD) * np.cos(np.radians(lat_rows))[:, None]
+    z = np.nan_to_num(floor_m, nan=float(np.nanmean(floor_m))) * 1.6
+    dzdy, dzdx = np.gradient(z)
+    dzdx, dzdy = dzdx / m_px, dzdy / m_px
+    az, alt = np.radians(315), np.radians(42)
+    slope = np.arctan(np.hypot(dzdx, dzdy))
+    aspect = np.arctan2(-dzdx, dzdy)
+    shade = np.clip(np.sin(alt) * np.cos(slope) + np.cos(alt) * np.sin(slope) * np.cos(az - aspect), 0, 1)
+    t = np.clip((W - 880) / (FULL_POOL_FT - 880), 0, 1)[..., None]
+    old_ring = np.array([250, 249, 245], float)     # long-exposed, near full pool
+    new_ring = np.array([226, 224, 218], float)     # recently exposed, near today's shoreline
+    base = new_ring + (old_ring - new_ring) * t
+    band = ((np.floor(W / 10) % 2) == 0)[..., None]
+    base = np.where(band, base * 0.955, base)
+    fifty = (np.abs(((W + 25) % 50) - 25) < 0.9)[..., None]   # ~1 px line every 50 ft
+    base = np.where(fifty, base * 0.8, base)
+    lit = base * (0.62 + 0.38 * shade[..., None]) + 18 * (shade[..., None] - 0.6)
     ring = np.zeros((h, w, 4), np.uint8)
-    t = np.clip((W - 880) / (FULL_POOL_FT - 880), 0, 1)
-    band = (np.floor(W / 10) % 2) == 0
-    base = np.stack([236 - 22 * t, 226 - 30 * t, 206 - 44 * t], -1)
-    base[band] *= 0.94
-    ring[..., :3] = np.clip(base, 0, 255)
-    ring[..., 3] = np.where(basin, 235, 0)
-    Image.fromarray(ring, "RGBA").save(os.path.join(OUT, "mead_ring.png"), optimize=True)
+    ring[..., :3] = np.clip(lit, 0, 255)
+    ring[..., 3] = np.where(basin, 250, 0)
+    Image.fromarray(ring, "RGBA").save(os.path.join(OUT, "mead_ring.webp"), quality=90, method=6)
+    old_png = os.path.join(OUT, "mead_ring.png")
+    if os.path.exists(old_png):
+        os.remove(old_png)
+
+    # mead_contours.geojson: the full-pool shoreline and the shorelines at key
+    # operating thresholds, traced from the same spill-elevation grid.
+    from shapely.geometry import LineString
+    from skimage.measure import find_contours
+    levels = {1229: "Full pool", 1075: "Tier 1", 1050: "SNWA Intake 1", 1000: "SNWA Intake 2",
+              950: "Min. power pool", 895: "Dead pool"}
+    Wc = np.where(W < 1300, W, 1300)
+    feats = []
+    for lvl, label in levels.items():
+        for c in find_contours(Wc, lvl):
+            if len(c) < 25:
+                continue
+            ls = LineString(c[:, ::-1]).simplify(0.9)
+            xy = np.asarray(ls.coords)
+            lon, lat = px_lonlat(px0 + xy[:, 0] + 0.5, py0 + xy[:, 1] + 0.5)
+            feats.append({"type": "Feature", "properties": {"elevation": lvl, "label": f"{lvl:,} ft · {label}"},
+                          "geometry": {"type": "LineString", "coordinates": [[round(float(a), 5), round(float(b), 5)] for a, b in zip(lon, lat)]}})
+    with open(os.path.join(OUT, "mead_contours.geojson"), "w") as f:
+        json.dump({"type": "FeatureCollection", "features": feats}, f, separators=(",", ":"))
 
     lon_w, lat_n = px_lonlat(np.array(px0), np.array(py0))
     lon_e, lat_s = px_lonlat(np.array(px0 + w), np.array(py0 + h))
@@ -203,7 +244,7 @@ def main():
     }
     with open(os.path.join(OUT, "mead_meta.json"), "w") as f:
         json.dump(meta, f, separators=(",", ":"))
-    for name in ("mead_w.png", "mead_floor.png", "mead_ring.png", "mead_meta.json"):
+    for name in ("mead_w.png", "mead_floor.png", "mead_ring.webp", "mead_contours.geojson", "mead_meta.json"):
         print(name, os.path.getsize(os.path.join(OUT, name)) // 1024, "KB")
 
 

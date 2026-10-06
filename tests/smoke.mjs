@@ -158,6 +158,141 @@ check('what-if line stays within the timeline chart', inside);
 const rulesHidden = await page.evaluate(() => { document.querySelector('#today').click(); return getComputedStyle(document.querySelector('#regime')).display === 'none'; });
 check('rules toggle hidden in timeline mode', rulesHidden);
 
+// ---- Shareable links, embed mode, methods, social tags
+const fresh = async (hash, viewport = {width: 1400, height: 900}) => {
+    const p = await browser.newPage({viewport});
+    p.on('pageerror', e => problems.push(`pageerror(${hash}): ${e.message}`));
+    await p.goto(url + hash, {waitUntil: 'domcontentloaded'});
+    await p.waitForSelector('#loading.done', {timeout: 60000});
+    await p.waitForTimeout(1500);
+    return p;
+};
+{
+    const p = await fresh('');
+    await p.waitForTimeout(1200);
+    check('default view keeps a clean URL', (await p.evaluate(() => location.hash)) === '', await p.evaluate(() => location.hash));
+    const vector = await p.evaluate(() => !!window.mead.map.getLayer('ofm-road_motorway') && !!window.mead.map.getLayer('base-relief'));
+    const ww = await p.evaluate(async () => {
+        const m = window.mead.map;
+        m.jumpTo({center: [-115.2, 33.6], zoom: 6.8, pitch: 0, bearing: 0});
+        await new Promise(r => m.once('idle', r));
+        return [...new Set(m.queryRenderedFeatures({layers: ['ww-line', 'ww-schematic']}).map(f => f.properties.id))].sort().join(',');
+    });
+    check('OSM-traced river reaches and all four aqueducts render', ww === 'aac,cap,coachella,cra,r1,r2,r3', ww);
+    check('OpenFreeMap vector basemap + terrain relief loaded', vector);
+    const tiles = await p.evaluate(() => performance.getEntriesByType('resource').map(r => r.name).filter(n => /opentopomap|tile\.openstreetmap\.org/.test(n)).length);
+    check('no requests to volunteer OSM/OpenTopoMap tile servers', tiles === 0, `${tiles} requests`);
+    const og = await p.evaluate(() => document.querySelector('meta[property="og:image"]').content);
+    check('social preview image is an absolute URL', /^https:\/\/.+\/og\.jpg$/.test(og), og);
+    await p.fill('#elev-input', '975');
+    await p.press('#elev-input', 'Enter');
+    await p.waitForFunction(() => location.hash.includes('level='), null, {timeout: 8000}).catch(() => {});
+    const h = await p.evaluate(() => location.hash);
+    check('changing the level updates the URL', h.includes('level=975'), h);
+    await p.click('#share-btn');
+    const link = await p.inputValue('#share-link');
+    const embed = await p.inputValue('#share-embed');
+    check('share dialog offers the current view as a link', link.includes('level=975') && link.startsWith('http'), link);
+    check('share dialog offers iframe embed code', embed.includes('<iframe') && embed.includes('embed=1'), embed.slice(0, 80));
+    await p.screenshot({path: `${out}/12-share-dialog.png`});
+    await p.close();
+}
+{
+    const p = await fresh('#level=950&rules=2007&map=satellite&region=phx&cam=-114.7600,36.0500,11.00,60,30');
+    const r = await p.evaluate(() => ({
+        big: document.querySelector('.m-big').textContent,
+        kicker: document.querySelector('.m-kicker').textContent,
+        rules: document.querySelector('.op-rules').textContent,
+        map: document.querySelector('#basemap .on').dataset.v,
+        region: document.querySelector('.rg-detail-head b')?.textContent,
+        zoom: window.mead.map.getZoom()
+    }));
+    check('shared link restores level, rules, basemap, region and camera',
+        r.big === '950' && r.kicker.includes('What-if') && r.rules.includes('2007') && r.map === 'satellite' && /Phoenix/.test(r.region ?? '') && Math.abs(r.zoom - 11) < 0.05,
+        JSON.stringify(r));
+    await p.close();
+}
+{
+    const p = await fresh('#date=2028-06-30&fc=min');
+    const r = await p.evaluate(() => ({kicker: document.querySelector('.m-kicker').textContent, date: document.querySelector('.m-date').textContent}));
+    check('shared link restores a forecast date and scenario', r.kicker.includes('Probable Minimum') && r.date.startsWith('Jun 30, 2028'), JSON.stringify(r));
+    await p.close();
+}
+{
+    const p = await fresh('#embed=1', {width: 900, height: 560});
+    const r = await p.evaluate(() => ({
+        sides: [...document.querySelectorAll('.side, .toolbar, .brand')].every(e => getComputedStyle(e).display === 'none'),
+        bar: getComputedStyle(document.querySelector('#embed-bar')).display !== 'none',
+        link: document.querySelector('.eb-link')?.getAttribute('href') ?? ''
+    }));
+    check('embed mode hides panels and links back to the full app', r.sides && r.bar && !r.link.includes('embed=1'), JSON.stringify(r));
+    await p.waitForTimeout(3000);
+    await p.screenshot({path: `${out}/13-embed.png`});
+    await p.close();
+}
+{
+    const p = await fresh('#about');
+    const r = await p.evaluate(() => ({open: document.querySelector('#about-dialog').open, latest: document.querySelector('[data-fill="latest"]').textContent}));
+    check('#about opens the methods & sources dialog', r.open && /ft on/.test(r.latest), JSON.stringify(r));
+    await p.screenshot({path: `${out}/14-about.png`});
+    await p.close();
+}
+
+// ---- Downstream flows respond to the lake level
+{
+    const p = await fresh('');
+    const today = await p.evaluate(() => [...document.querySelectorAll('.fl')].map(li => li.querySelector('.fl-name').textContent.trim() + '=' + li.querySelector('.fl-val').textContent.trim()));
+    check('flows panel lists the river reaches and four aqueducts', today.length === 7, today.join(' | '));
+    check('flow below Hoover uses observed USBR releases today', /Below Hoover USBR=\d\.\d\d/.test(today[0]), today[0]);
+    await p.fill('#elev-input', '890');
+    await p.press('#elev-input', 'Enter');
+    await p.waitForTimeout(500);
+    const dead = await p.evaluate(() => ({
+        vals: [...document.querySelectorAll('.fl-val')].map(e => e.textContent.trim()),
+        lakes: [...document.querySelectorAll('.lake small')].map(e => e.textContent),
+        state: window.mead.map.getFeatureState({source: 'waterways', id: 'cap'})
+    }));
+    check('at dead pool every reach and canal runs dry', dead.vals.every(v => v === 'Dry') && dead.state.dry === true, dead.vals.join(','));
+    check('at dead pool Lakes Mohave and Havasu are flagged', dead.lakes.every(t => /No inflow/.test(t)), dead.lakes.join(' | '));
+    await p.fill('#elev-input', '1100');
+    await p.press('#elev-input', 'Enter');
+    await p.waitForTimeout(500);
+    const cap = await p.evaluate(() => window.mead.map.getFeatureState({source: 'waterways', id: 'cap'}).scale);
+    check('canal line width shrinks with shortage cuts', cap > 0.5 && cap < 1, `CAP width scale ${cap?.toFixed(2)}`);
+    await p.close();
+}
+
+// ---- Terrain must not depend on canvas readback: Safari/Firefox/Brave anti-fingerprinting
+// adds noise to getImageData, which used to show up as needle peaks (±256 m per red step).
+{
+    const p = await browser.newPage({viewport: {width: 1200, height: 800}});
+    await p.addInitScript(() => {
+        const patch = proto => {
+            const orig = proto.getImageData;
+            proto.getImageData = function (...a) {
+                const img = orig.apply(this, a);
+                for (let i = 0; i < img.data.length; i += 4) if (Math.random() < 0.002) img.data[i + (Math.random() * 3 | 0)] += Math.random() < 0.5 ? 1 : -1;
+                return img;
+            };
+        };
+        patch(CanvasRenderingContext2D.prototype);
+        if (self.OffscreenCanvasRenderingContext2D) patch(OffscreenCanvasRenderingContext2D.prototype);
+    });
+    await p.goto(url + '#cam=-114.7500,36.0600,13.20,72,20', {waitUntil: 'domcontentloaded'});
+    await p.waitForSelector('#loading.done', {timeout: 60000});
+    await p.waitForFunction(() => { const m = window.mead?.map; return m && m.loaded() && m.areTilesLoaded() && !m.isMoving(); }, null, {timeout: 60000, polling: 500}).catch(() => {});
+    const r = await p.evaluate(() => {
+        const m = window.mead.map, ex = m.getTerrain()?.exaggeration ?? 1, b = m.getBounds(), N = 100, g = [];
+        for (let j = 0; j < N; j++) { const row = []; for (let i = 0; i < N; i++) row.push((m.queryTerrainElevation([b.getWest() + (b.getEast() - b.getWest()) * (i + .5) / N, b.getSouth() + (b.getNorth() - b.getSouth()) * (j + .5) / N]) ?? NaN) / ex); g.push(row); }
+        let worst = 0;
+        for (let j = 1; j < N - 1; j++) for (let i = 1; i < N - 1; i++) { const nb = [g[j-1][i], g[j+1][i], g[j][i-1], g[j][i+1]].sort((a, b) => a - b); const d = g[j][i] - (nb[1] + nb[2]) / 2; if (Math.abs(d) > Math.abs(worst)) worst = d; }
+        return Math.round(worst);
+    });
+    check('terrain has no needle spikes under canvas fingerprinting noise', Math.abs(r) < 600, `worst deviation ${r} m`);
+    await p.screenshot({path: `${out}/15-terrain-noise.png`});
+    await p.close();
+}
+
 // Phone layout (fresh load so the narrow-screen defaults apply).
 const phone = await browser.newPage({viewport: {width: 400, height: 860}, deviceScaleFactor: 2});
 phone.on('pageerror', e => problems.push(`pageerror(phone): ${e.message}`));

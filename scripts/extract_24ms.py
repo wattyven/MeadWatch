@@ -83,11 +83,12 @@ def parse(scn):
         if not m:
             continue
         nums = m.group(3).split()
-        # last two columns: end-of-month elevation (ft), live storage (kaf)
-        rows[month_end(m.group(1), int(m.group(2)))] = {
-            "elevationFt": float(nums[-2]),
-            "storageKaf": float(nums[-1]),
-        }
+        # columns: Glen release, side inflow, evaporation, total release (kaf), total release (kcfs),
+        # SNWP use, downstream requirements, bank storage, end-of-month elevation (ft), live storage (kaf)
+        row = {"elevationFt": float(nums[-2]), "storageKaf": float(nums[-1])}
+        if len(nums) >= 10:
+            row["releaseKaf"] = float(nums[3])
+        rows[month_end(m.group(1), int(m.group(2)))] = row
     if power:
         for line in power.split("\n"):
             m = ROW.match(line)

@@ -1,10 +1,12 @@
-import maplibregl, {type StyleSpecification, type Map as MlMap} from 'maplibre-gl';
+import maplibregl, {type LayerSpecification, type StyleSpecification, type Map as MlMap} from 'maplibre-gl';
 import type {AppData} from './data';
 import {DEM_ATTRIBUTION, DEM_MAXZOOM, type Raster} from './terrain';
 import {WaterLayer} from './waterLayer';
-import {REGIONS, type RegionImpact, severityColor} from './impacts';
+import {type Flow, REGIONS, type RegionImpact, severityColor} from './impacts';
+import {type Basemap, RELIEF_COLORS, type VectorBase, basemapVisibility, isRoadLayer, loadVectorBase} from './basemap';
+import type {Camera} from './urlState';
 
-export type Basemap = 'topo' | 'osm' | 'satellite';
+export type {Basemap};
 
 export const VIEWS = {
     lake: {center: [-114.52, 36.0] as [number, number], zoom: 9.35, pitch: 62, bearing: 8},
@@ -16,28 +18,30 @@ export type ViewId = keyof typeof VIEWS;
 
 const BASE = import.meta.env.BASE_URL;
 
-function style(app: AppData): StyleSpecification {
+/** Line width interpolated by zoom and multiplied by the flow scale in feature-state. */
+function widthByFlow(extra: number, z5: number, z9: number, z13: number): maplibregl.ExpressionSpecification {
+    const k: maplibregl.ExpressionSpecification = ['coalesce', ['feature-state', 'scale'], 1];
+    return ['interpolate', ['linear'], ['zoom'],
+        5, ['+', extra, ['*', z5, k]], 9, ['+', extra * 1.2, ['*', z9, k]], 13, ['+', extra * 1.5, ['*', z13, k]]];
+}
+
+/** Where each reach's or canal's flow label sits. */
+const FLOW_ANCHORS: Record<string, [number, number]> = {
+    r1: [-114.57, 34.95], cap: [-113.05, 33.72], cra: [-115.78, 33.78], r2: [-114.55, 33.82],
+    aac: [-115.05, 32.66], coachella: [-115.62, 33.40], r3: [-114.75, 32.56]
+};
+
+function style(app: AppData, base: VectorBase, basemap: Basemap): StyleSpecification {
     const [w, s, e, n] = app.meta.bounds;
+    const vis = new Map(basemapVisibility(base, basemap));
+    const withVis = (l: LayerSpecification): LayerSpecification =>
+        vis.has(l.id) ? {...l, layout: {...(l as {layout?: object}).layout, visibility: vis.get(l.id)}} as LayerSpecification : l;
     return {
         version: 8,
         glyphs: 'https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf',
+        ...(base.sprite ? {sprite: base.sprite} : {}),
         sources: {
-            // OpenTopoMap drops its elevation tint from z11, so the tinted z≤10 tiles
-            // are used everywhere and the crisp z11+ tiles fade in on close-ups.
-            topo: {
-                type: 'raster', tileSize: 256, maxzoom: 10,
-                tiles: ['a', 'b', 'c'].map(sd => `https://${sd}.tile.opentopomap.org/{z}/{x}/{y}.png`),
-                attribution: 'Map data © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, SRTM · Style © <a href="https://opentopomap.org">OpenTopoMap</a> (CC-BY-SA)'
-            },
-            topoHigh: {
-                type: 'raster', tileSize: 256, minzoom: 11, maxzoom: 17,
-                tiles: ['a', 'b', 'c'].map(sd => `https://${sd}.tile.opentopomap.org/{z}/{x}/{y}.png`)
-            },
-            osm: {
-                type: 'raster', tileSize: 256, maxzoom: 19,
-                tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-                attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            },
+            ...base.sources,
             satellite: {
                 type: 'raster', tileSize: 256, maxzoom: 14,
                 tiles: ['https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/{z}/{y}/{x}.jpg'],
@@ -46,31 +50,52 @@ function style(app: AppData): StyleSpecification {
             dem: {type: 'raster-dem', tiles: ['meadem://{z}/{x}/{y}'], tileSize: 256, encoding: 'terrarium', maxzoom: DEM_MAXZOOM, attribution: DEM_ATTRIBUTION},
             hill: {type: 'raster-dem', tiles: ['meadem://{z}/{x}/{y}'], tileSize: 256, encoding: 'terrarium', maxzoom: DEM_MAXZOOM},
             ring: {
-                type: 'image', url: BASE + 'data/mead_ring.png',
+                type: 'image', url: BASE + 'data/mead_ring.webp',
                 coordinates: [[w, n], [e, n], [e, s], [w, s]]
             },
+            contours: {type: 'geojson', data: BASE + 'data/mead_contours.geojson'},
             regions: {type: 'geojson', data: app.regions, promoteId: 'id'},
-            labels: {type: 'geojson', data: {type: 'FeatureCollection', features: []}}
+            // all pieces of one conveyance share an id, so one feature-state colours them all
+            waterways: {type: 'geojson', data: BASE + 'data/waterways.geojson', promoteId: 'id'},
+            labels: {type: 'geojson', data: {type: 'FeatureCollection', features: []}},
+            flowlabels: {type: 'geojson', data: {type: 'FeatureCollection', features: []}}
         },
         layers: [
-            {id: 'bg', type: 'background', paint: {'background-color': '#e9e4d8'}},
-            {id: 'base-topo', type: 'raster', source: 'topo', paint: {'raster-saturation': -0.25, 'raster-contrast': -0.05}},
-            {
-                id: 'base-topoHigh', type: 'raster', source: 'topoHigh', minzoom: 11.3,
-                paint: {'raster-opacity': ['interpolate', ['linear'], ['zoom'], 11.3, 0, 12.3, 0.8], 'raster-saturation': -0.25}
-            },
-            {id: 'base-osm', type: 'raster', source: 'osm', layout: {visibility: 'none'}, paint: {'raster-saturation': -0.3}},
-            {id: 'base-satellite', type: 'raster', source: 'satellite', layout: {visibility: 'none'}},
+            {id: 'bg', type: 'background', paint: {'background-color': '#ebe5d6'}},
+            withVis({id: 'base-satellite', type: 'raster', source: 'satellite'}),
+            withVis({id: 'base-relief', type: 'color-relief', source: 'hill', paint: {'color-relief-color': RELIEF_COLORS, 'color-relief-opacity': 1}}),
+            ...base.under.filter(l => !isRoadLayer(l.id) && !/^ofm-(water|waterway)/.test(l.id) && !/boundary/.test(l.id)).map(withVis),
             {
                 id: 'hillshade', type: 'hillshade', source: 'hill',
                 paint: {
-                    'hillshade-exaggeration': 0.32,
+                    'hillshade-exaggeration': basemap === 'satellite' ? 0.12 : 0.42,
                     'hillshade-shadow-color': '#3d3328',
                     'hillshade-highlight-color': '#fffaf0',
                     'hillshade-accent-color': '#5c4b38'
                 }
             },
-            {id: 'lakebed', type: 'raster', source: 'ring', paint: {'raster-opacity': 0.93, 'raster-fade-duration': 0}},
+            ...base.under.filter(l => /^ofm-(water|waterway)/.test(l.id) || /boundary/.test(l.id) || isRoadLayer(l.id)).map(withVis),
+            {id: 'lakebed', type: 'raster', source: 'ring', paint: {'raster-opacity': 1, 'raster-fade-duration': 0, 'raster-resampling': 'linear'}},
+            {
+                // shorelines at operating thresholds; the water plane hides the submerged ones
+                id: 'lakebed-contours', type: 'line', source: 'contours', filter: ['<', ['get', 'elevation'], 1229],
+                layout: {'line-join': 'round'},
+                paint: {
+                    'line-color': ['match', ['get', 'elevation'], 1075, '#c9871f', 950, '#c8402f', 895, '#7d1530', '#4f6a86'],
+                    'line-width': ['interpolate', ['linear'], ['zoom'], 8, 0.8, 12, 1.8],
+                    'line-dasharray': [3, 2],
+                    'line-opacity': 0.9
+                }
+            },
+            {
+                id: 'lakebed-outline', type: 'line', source: 'contours', filter: ['==', ['get', 'elevation'], 1229], minzoom: 7.5,
+                layout: {'line-join': 'round'},
+                paint: {
+                    'line-color': '#1f2c3b',
+                    'line-width': ['interpolate', ['linear'], ['zoom'], 7, 0.8, 10, 1.6, 13, 2.6],
+                    'line-opacity': 0.85
+                }
+            },
             {
                 id: 'region-fill', type: 'fill', source: 'regions', filter: ['==', ['get', 'layer'], 'region'],
                 paint: {
@@ -87,14 +112,12 @@ function style(app: AppData): StyleSpecification {
                 }
             },
             {
-                id: 'aqueduct-casing', type: 'line', source: 'regions',
-                filter: ['all', ['==', ['get', 'layer'], 'aqueduct'], ['!=', ['get', 'id'], 'river']],
+                id: 'aqueduct-casing', type: 'line', source: 'regions', filter: ['==', ['get', 'layer'], 'aqueduct'],
                 layout: {'line-cap': 'round', 'line-join': 'round'},
                 paint: {'line-color': '#0e1520', 'line-width': ['interpolate', ['linear'], ['zoom'], 5, 4.5, 10, 8], 'line-opacity': 0.85}
             },
             {
-                id: 'aqueduct', type: 'line', source: 'regions',
-                filter: ['all', ['==', ['get', 'layer'], 'aqueduct'], ['!=', ['get', 'id'], 'river']],
+                id: 'aqueduct', type: 'line', source: 'regions', filter: ['==', ['get', 'layer'], 'aqueduct'],
                 layout: {'line-cap': 'round', 'line-join': 'round'},
                 paint: {
                     'line-color': ['to-color', ['coalesce', ['feature-state', 'color'], '#5cc8e0']],
@@ -102,14 +125,54 @@ function style(app: AppData): StyleSpecification {
                     'line-dasharray': [2.2, 1.3]
                 }
             },
+            // OSM-traced river and canals. Bridged pieces of the river (reservoirs with no
+            // mapped centreline) are not drawn: the basemap's lake shows there instead.
+            // Line width scales with modeled flow (feature-state `scale`); `dry` greys it out.
             {
-                id: 'river', type: 'line', source: 'regions',
-                filter: ['all', ['==', ['get', 'layer'], 'aqueduct'], ['==', ['get', 'id'], 'river']],
+                id: 'ww-casing', type: 'line', source: 'waterways',
+                filter: ['all', ['!', ['get', 'gap']], ['!', ['get', 'schematic']]],
                 layout: {'line-cap': 'round', 'line-join': 'round'},
                 paint: {
-                    'line-color': '#1f78d1',
-                    'line-width': ['interpolate', ['linear'], ['zoom'], 5, 2, 10, 3.5],
-                    'line-opacity': 0.9
+                    'line-color': ['match', ['get', 'kind'], 'river', '#ffffff', '#0e1520'],
+                    'line-width': widthByFlow(1.6, 3.4, 5.5, 9),
+                    'line-opacity': ['case', ['boolean', ['feature-state', 'dry'], false], 0.45, ['match', ['get', 'kind'], 'river', 0.75, 0.8]]
+                }
+            },
+            {
+                id: 'ww-line', type: 'line', source: 'waterways',
+                filter: ['all', ['!', ['get', 'gap']], ['!', ['get', 'schematic']]],
+                layout: {'line-cap': 'round', 'line-join': 'round'},
+                paint: {
+                    'line-color': ['case', ['boolean', ['feature-state', 'dry'], false], '#a3a9b1',
+                        ['match', ['get', 'kind'], 'river', '#1f78d1', ['to-color', ['coalesce', ['feature-state', 'color'], '#5cc8e0']]]],
+                    'line-width': widthByFlow(0, 1.8, 3, 5)
+                }
+            },
+            {
+                // siphons and tunnel portals bridged on canals
+                id: 'ww-gap', type: 'line', source: 'waterways',
+                filter: ['all', ['get', 'gap'], ['==', ['get', 'kind'], 'canal']],
+                paint: {
+                    'line-color': ['to-color', ['coalesce', ['feature-state', 'color'], '#5cc8e0']],
+                    'line-width': ['interpolate', ['linear'], ['zoom'], 5, 1.4, 10, 2.5],
+                    'line-dasharray': [1, 1.4]
+                }
+            },
+            {
+                id: 'ww-schematic-casing', type: 'line', source: 'waterways', filter: ['get', 'schematic'],
+                layout: {'line-cap': 'round', 'line-join': 'round'},
+                paint: {'line-color': '#0e1520', 'line-width': ['interpolate', ['linear'], ['zoom'], 5, 3.6, 10, 5.5], 'line-opacity': 0.55}
+            },
+            {
+                // Colorado River Aqueduct: buried conduit, drawn through its pumping plants
+                id: 'ww-schematic', type: 'line', source: 'waterways', filter: ['get', 'schematic'],
+                layout: {'line-cap': 'round', 'line-join': 'round'},
+                paint: {
+                    'line-color': ['case', ['boolean', ['feature-state', 'dry'], false], '#a3a9b1',
+                        ['to-color', ['coalesce', ['feature-state', 'color'], '#5cc8e0']]],
+                    'line-width': ['interpolate', ['linear'], ['zoom'], 5, 2, 10, 3.2],
+                    'line-dasharray': [1.2, 1.2],
+                    'line-opacity': 0.95
                 }
             }
         ]
@@ -117,6 +180,18 @@ function style(app: AppData): StyleSpecification {
 }
 
 const SYMBOL_LAYERS: maplibregl.LayerSpecification[] = [
+    {
+        id: 'lakebed-contour-labels', type: 'symbol', source: 'contours', minzoom: 9.6,
+        filter: ['>', ['get', 'elevation'], 1040],
+        layout: {
+            'symbol-placement': 'line', 'symbol-spacing': 420, 'text-field': ['get', 'label'],
+            'text-font': ['Noto Sans Bold'], 'text-size': 10.5, 'text-max-angle': 30, 'text-padding': 8
+        },
+        paint: {
+            'text-color': ['match', ['get', 'elevation'], 1229, '#1f2c3b', 1075, '#8a5a0e', 950, '#9e2a1e', 895, '#6b1129', '#33506e'],
+            'text-halo-color': 'rgba(255,255,255,0.92)', 'text-halo-width': 1.6
+        }
+    },
     {
         id: 'basin-label', type: 'symbol', source: 'regions', filter: ['==', ['get', 'layer'], 'basin'], minzoom: 8.5,
         layout: {
@@ -143,6 +218,21 @@ const SYMBOL_LAYERS: maplibregl.LayerSpecification[] = [
         paint: {'text-color': '#1d2433', 'text-halo-color': 'rgba(255,255,255,0.9)', 'text-halo-width': 1.5}
     },
     {
+        id: 'flow-label', type: 'symbol', source: 'flowlabels', minzoom: 5.6, maxzoom: 10.5,
+        layout: {
+            'text-field': ['format',
+                ['get', 'name'], {'font-scale': 0.92, 'text-font': ['literal', ['Noto Sans Bold']]},
+                '\n', {},
+                ['get', 'flow'], {'font-scale': 0.86, 'text-font': ['literal', ['Noto Sans Regular']]}],
+            'text-font': ['Noto Sans Bold'], 'text-size': 11.5, 'text-line-height': 1.2,
+            'text-variable-anchor': ['left', 'right', 'top', 'bottom'], 'text-radial-offset': 0.9, 'text-padding': 3
+        },
+        paint: {
+            'text-color': ['case', ['get', 'dry'], '#7a2b2b', '#0d4f7c'],
+            'text-halo-color': 'rgba(255,255,255,0.92)', 'text-halo-width': 1.6
+        }
+    },
+    {
         id: 'region-label', type: 'symbol', source: 'labels', maxzoom: 9.2,
         layout: {
             'text-field': ['format',
@@ -162,22 +252,32 @@ export interface MapHandles {
     map: MlMap;
     water: WaterLayer;
     setBasemap(b: Basemap): void;
+    getCamera(): Camera;
+    setLevel(ft: number): void;
     setView(v: ViewId): void;
     setTerrain(on: boolean, exaggeration?: number): void;
     updateImpacts(impacts: RegionImpact[]): void;
+    updateFlows(flows: Flow[]): void;
     onRegionClick(cb: (id: string) => void): void;
-    selectRegion(id: string | null): void;
+    selectRegion(id: string | null, fly?: boolean): void;
 }
 
-export function createMap(container: HTMLElement, app: AppData, w: Raster, floor: Raster): Promise<MapHandles> {
+export interface MapOptions {
+    camera?: Camera;
+    basemap: Basemap;
+    interactive?: boolean;
+}
+
+export async function createMap(container: HTMLElement, app: AppData, w: Raster, floor: Raster, opts: MapOptions): Promise<MapHandles> {
     const phone = window.innerWidth <= 760;
+    const base = await loadVectorBase();
     const map = new maplibregl.Map({
         container,
-        style: style(app),
-        ...VIEWS.lake,
-        zoom: VIEWS.lake.zoom - (phone ? 1.1 : 0),
+        style: style(app, base, opts.basemap),
+        ...(opts.camera ?? {...VIEWS.lake, zoom: VIEWS.lake.zoom - (phone ? 1.1 : 0)}),
         maxPitch: 80,
         attributionControl: {compact: true},
+        interactive: opts.interactive ?? true,
         canvasContextAttributes: {antialias: true}
     });
     map.addControl(new maplibregl.NavigationControl({visualizePitch: true}), 'top-right');
@@ -200,6 +300,7 @@ export function createMap(container: HTMLElement, app: AppData, w: Raster, floor
                 'sky-horizon-blend': 0.6, 'horizon-fog-blend': 0.6, 'fog-ground-blend': 0.35, 'atmosphere-blend': 0
             });
             map.addLayer(water);
+            for (const l of base.labels) map.addLayer(l);
             for (const l of SYMBOL_LAYERS) map.addLayer(l);
 
             let hovered: string | null = null;
@@ -225,11 +326,23 @@ export function createMap(container: HTMLElement, app: AppData, w: Raster, floor
                 map,
                 water,
                 setBasemap(b) {
-                    for (const id of ['topo', 'osm', 'satellite'] as Basemap[]) {
-                        map.setLayoutProperty(`base-${id}`, 'visibility', id === b ? 'visible' : 'none');
+                    for (const [id, v] of basemapVisibility(base, b)) if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', v);
+                    map.setPaintProperty('hillshade', 'hillshade-exaggeration', b === 'satellite' ? 0.12 : 0.42);
+                    for (const l of base.under) {
+                        if (isRoadLayer(l.id) && l.type === 'line') map.setPaintProperty(l.id, 'line-opacity', b === 'satellite' ? 0.55 : 1);
                     }
-                    map.setLayoutProperty('base-topoHigh', 'visibility', b === 'topo' ? 'visible' : 'none');
-                    map.setPaintProperty('hillshade', 'hillshade-exaggeration', b === 'satellite' ? 0.12 : 0.32);
+                },
+                setLevel(ft) {
+                    water.setLevel(ft);
+                    // Only show shorelines that are above the water. Submerged ones are normally
+                    // hidden by the water plane, but in canyons narrower than the terrain mesh
+                    // the smoothed surface would show them through.
+                    map.setFilter('lakebed-contour-labels', ['>', ['get', 'elevation'], ft + 0.5]);
+                    map.setFilter('lakebed-contours', ['all', ['<', ['get', 'elevation'], 1229], ['>', ['get', 'elevation'], ft + 0.5]]);
+                },
+                getCamera() {
+                    const c = map.getCenter();
+                    return {center: [c.lng, c.lat], zoom: map.getZoom(), pitch: map.getPitch(), bearing: map.getBearing()};
                 },
                 setView(v) {
                     if (v === 'region') {
@@ -249,10 +362,13 @@ export function createMap(container: HTMLElement, app: AppData, w: Raster, floor
                     for (const imp of impacts) {
                         map.setFeatureState({source: 'regions', id: imp.id}, {color: severityColor(imp.severity)});
                     }
-                    const aqueductTarget: Record<string, string> = {cra: 'socal', cap: 'phx', aac: 'iid', coachella: 'cvwd', snwa: 'lv'};
-                    for (const [aq, region] of Object.entries(aqueductTarget)) {
+                    const aqueductTarget: Record<string, [string, string]> = {
+                        cra: ['waterways', 'socal'], cap: ['waterways', 'phx'], aac: ['waterways', 'iid'],
+                        coachella: ['waterways', 'cvwd'], snwa: ['regions', 'lv']
+                    };
+                    for (const [aq, [source, region]] of Object.entries(aqueductTarget)) {
                         const imp = byId.get(region);
-                        map.setFeatureState({source: 'regions', id: aq}, {color: imp ? severityColor(imp.severity) : '#5cc8e0'});
+                        map.setFeatureState({source, id: aq}, {color: imp ? severityColor(imp.severity) : '#5cc8e0'});
                     }
                     const features = REGIONS.map(r => {
                         const imp = byId.get(r.id)!;
@@ -264,19 +380,37 @@ export function createMap(container: HTMLElement, app: AppData, w: Raster, floor
                     });
                     (map.getSource('labels') as maplibregl.GeoJSONSource).setData({type: 'FeatureCollection', features});
                 },
+                updateFlows(flows) {
+                    for (const f of flows) {
+                        // area-like scaling so a halved flow reads as clearly thinner, never vanishing
+                        const scale = f.dry ? 0.55 : 0.35 + 0.65 * Math.sqrt(Math.min(1.2, f.ratio));
+                        map.setFeatureState({source: 'waterways', id: f.id}, {scale, dry: f.dry});
+                    }
+                    const fmt = (f: Flow) => f.dry ? 'dry: no release from Hoover'
+                        : `${f.maf.toFixed(2)} MAF/yr${Math.abs(f.ratio - 1) >= 0.01 ? ` (${f.ratio < 1 ? '−' : '+'}${Math.round(Math.abs(1 - f.ratio) * 100)}%)` : ''}`;
+                    (map.getSource('flowlabels') as maplibregl.GeoJSONSource).setData({
+                        type: 'FeatureCollection',
+                        features: flows.map(f => ({
+                            type: 'Feature' as const,
+                            properties: {name: f.short, flow: fmt(f), dry: f.dry},
+                            geometry: {type: 'Point' as const, coordinates: FLOW_ANCHORS[f.id]}
+                        }))
+                    });
+                },
                 onRegionClick(cb) {
                     clickHandlers.push(cb);
                 },
-                selectRegion(id) {
+                selectRegion(id, fly = true) {
                     if (selected) map.setFeatureState({source: 'regions', id: selected}, {selected: false});
                     selected = id;
                     if (id) {
                         map.setFeatureState({source: 'regions', id}, {selected: true});
                         const r = REGIONS.find(x => x.id === id)!;
-                        map.flyTo({center: r.center, zoom: r.zoom, pitch: 45, bearing: 0, duration: 2200, essential: true});
+                        if (fly) map.flyTo({center: r.center, zoom: r.zoom, pitch: 45, bearing: 0, duration: 2200, essential: true});
                     }
                 }
             };
+            if (opts.basemap === 'satellite') handles.setBasemap('satellite');
             resolve(handles);
         });
     });

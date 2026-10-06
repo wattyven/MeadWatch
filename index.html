@@ -5,6 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
     <title>MeadWatch · Lake Mead drought explorer</title>
     <meta name="description" content="Interactive 3D map of Lake Mead's record-low water levels, forecasts, and the people, farms and power customers downstream who depend on it."/>
+    <meta property="og:type" content="website"/>
+    <meta property="og:title" content="MeadWatch · Lake Mead drought explorer"/>
+    <meta property="og:description" content="Watch the water supply of 28 million people drain, in 3D, on the real lake floor. Forecasts and downstream impacts for Lake Mead."/>
+    <meta property="og:url" content="%VITE_SITE_URL%"/>
+    <meta property="og:image" content="%VITE_SITE_URL%og.jpg"/>
+    <meta property="og:image:width" content="1200"/>
+    <meta property="og:image:height" content="630"/>
+    <meta name="twitter:card" content="summary_large_image"/>
+    <meta name="twitter:title" content="MeadWatch · Lake Mead drought explorer"/>
+    <meta name="twitter:description" content="Watch the water supply of 28 million people drain, in 3D, on the real lake floor."/>
+    <meta name="twitter:image" content="%VITE_SITE_URL%og.jpg"/>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 3c5 7 9 11.6 9 16.4A9 9 0 0 1 7 19.4C7 14.6 11 10 16 3z' fill='%235cc8e0'/%3E%3C/svg%3E"/>
     <link rel="preconnect" href="https://fonts.googleapis.com"/>
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet"/>
@@ -22,6 +34,14 @@
             <h1>MeadWatch</h1>
             <p class="tagline">Lake Mead drought explorer</p>
         </div>
+        <div class="brand-actions">
+            <button class="icon-btn" id="share-btn" title="Share or embed this view" aria-label="Share or embed this view">
+                <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M14 13a3 3 0 0 0-2.2 1l-4.9-2.5a3 3 0 0 0 0-1l4.9-2.5A3 3 0 1 0 11 6.5l-4.9 2.5a3 3 0 1 0 0 2l4.9 2.5A3 3 0 1 0 14 13z" fill="currentColor"/></svg>
+            </button>
+            <button class="icon-btn" id="about-btn" title="About, methods and sources" aria-label="About, methods and sources">
+                <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M10 9v5M10 6.2v.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </button>
+        </div>
     </div>
     <div class="alert" id="alert"></div>
 </header>
@@ -29,7 +49,7 @@
 <div class="toolbar panel" role="toolbar" aria-label="Map options">
     <div class="seg" id="basemap" role="radiogroup" aria-label="Basemap">
         <button data-v="topo" class="on" role="radio" aria-checked="true">Topo</button>
-        <button data-v="osm" role="radio" aria-checked="false">OSM</button>
+        <button data-v="streets" role="radio" aria-checked="false">Streets</button>
         <button data-v="satellite" role="radio" aria-checked="false">Satellite</button>
     </div>
     <div class="seg" id="views" aria-label="Camera views">
@@ -58,6 +78,61 @@
 </aside>
 
 <div class="legend panel" id="legend"></div>
+
+<div class="embed-bar panel" id="embed-bar" hidden></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<dialog id="share-dialog" class="dialog" aria-labelledby="share-title">
+    <form method="dialog" class="dlg-head"><h2 id="share-title">Share this view</h2><button class="icon-btn" aria-label="Close">✕</button></form>
+    <p class="dlg-sub">The link keeps the current water level or date, forecast, basemap, selected region and camera.</p>
+    <label class="dlg-label" for="share-link">Link</label>
+    <div class="copy-row"><input id="share-link" readonly/><button class="btn" data-copy="share-link">Copy link</button></div>
+    <label class="dlg-label" for="share-embed">Embed (iframe)</label>
+    <div class="copy-row"><textarea id="share-embed" readonly rows="3"></textarea><button class="btn" data-copy="share-embed">Copy code</button></div>
+    <p class="dlg-note">Embeds show the map and timeline with a compact readout and a link back to the full app.</p>
+</dialog>
+
+<dialog id="about-dialog" class="dialog wide" aria-labelledby="about-title">
+    <form method="dialog" class="dlg-head"><h2 id="about-title">About, methods &amp; sources</h2><button class="icon-btn" aria-label="Close">✕</button></form>
+    <div class="about">
+        <p class="disclaimer"><b>Independent project.</b> MeadWatch is not affiliated with, or endorsed by, the U.S. Bureau of Reclamation,
+            USGS or any water agency. Official figures come from the sources below; anything marked <span class="est">est.</span> is our approximation.</p>
+
+        <h3>Data</h3>
+        <ul>
+            <li><b>Lake levels &amp; storage</b>: USBR hydrodata, Lake Mead (site 921), daily. Latest reading <span data-fill="latest"></span>; snapshot taken <span data-fill="fetched"></span>, refreshed automatically each day.
+                <a href="https://www.usbr.gov/uc/water/hydrodata/reservoir_data/site_map.html" target="_blank" rel="noopener">source</a></li>
+            <li><b>Forecasts</b>: Reclamation 24-Month Study, end-of-month Lake Mead elevations: <span data-fill="scenarios"></span>.
+                <a href="https://www.usbr.gov/lc/region/g4000/24mo/index.html" target="_blank" rel="noopener">source</a></li>
+            <li><b>Lake floor</b>: USGS/USBR Open-File Report 03-320, 30 m surface of the floor of Lake Mead (2001 swath bathymetry + pre-impoundment contours + NED).
+                <a href="https://pubs.usgs.gov/of/2003/of03-320/" target="_blank" rel="noopener">source</a></li>
+            <li><b>Operating rules</b>: 2007 Interim Guidelines, 2019 Drought Contingency Plans, IBWC Minute 323, and the 2027–2028 Operating Guidelines (Aug 2026).
+                <a href="https://www.usbr.gov/ColoradoRiverBasin/post2026/decision-doc/2027-2028OperatingGuidelines_Final.pdf" target="_blank" rel="noopener">source</a></li>
+            <li><b>Rivers &amp; canals</b>: OpenStreetMap waterways (via OpenFreeMap tiles), traced from intake to terminus. Lake Havasu has no mapped river centreline, so the river isn’t drawn across it.
+                The Colorado River Aqueduct is mostly buried conduit that OSM doesn’t carry, so it is drawn through its pumping plants as an approximate route.
+                <b>Region outlines</b>: US Census counties; irrigation districts are traced approximations.</li>
+            <li><b>Basemap</b>: © OpenStreetMap contributors via OpenFreeMap / OpenMapTiles; terrain from AWS Open Data Terrain Tiles; imagery Sentinel-2 cloudless 2016 by EOX (CC BY 4.0).</li>
+        </ul>
+
+        <h3>How the lake is drawn</h3>
+        <p>Inside the reservoir, the terrain is the USGS lake-floor survey rather than the flat water surface most elevation models record.
+            Every 30 m cell gets a “spill elevation”: the lowest lake level at which water reaches it from Hoover Dam (cells cut off by a sill stay dry).
+            The water surface is a flat plane at the chosen elevation, drawn only over cells below it and shaded by depth. Storage and area come from the same grid,
+            scaled by 0.4% to match USBR’s reported storage today.</p>
+
+        <h3>How impacts are estimated</h3>
+        <ul>
+            <li><b>Scheduled cuts by state</b> follow the published rules. For 2021–2026 the app uses the tier Reclamation actually declared each year.</li>
+            <li><b>Splits within a state</b> <span class="est">est.</span>: Arizona’s first 512,000 AF of cuts fall on CAP agriculture and excess water, the rest on CAP cities and tribes;
+                California’s cut is split 60/30/7/3 among MWD, IID, CVWD and PVID. Mexico’s 2027–28 terms (Minute 334) are not modeled.</li>
+            <li><b>Hoover capacity</b> <span class="est">est.</span>: 2,080 MW × (head ÷ 583 ft)<sup>1.15</sup>, calibrated to 24-Month Study effective-capacity figures; zero below 950 ft.</li>
+            <li><b>Physical limits</b>: below 950 ft releases are limited to the outlet works; at 895 ft (dead pool) nothing passes Hoover Dam; SNWA’s pumping station reaches ~875 ft.</li>
+            <li><b>Region colour</b> is the largest of: the scheduled cut as a share of the region’s Colorado River supply, half of Hoover’s lost capacity (power-contract holders), or physical risk.</li>
+            <li>Populations and acreages are rounded public figures.</li>
+        </ul>
+        <p class="dlg-note">Code and data pipeline: see the project README. Feedback and corrections welcome.</p>
+    </div>
+</dialog>
 
 <section class="timeline panel" aria-label="Timeline and water level controls">
     <div class="tl-controls">

@@ -2,15 +2,17 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import './style.css';
 import {
     type AppData, type ScenarioId, DEAD_POOL, FULL_POOL, MIN_POWER_POOL,
-    elevationAt, isForecast, liveStorageAf, loadData, surfaceAreaAcres, toT
+    elevationAt, hooverReleaseMaf, isForecast, liveStorageAf, loadData, sample, surfaceAreaAcres, toT
 } from './data';
 import {
-    DECLARED_TIERS, HOOVER_NAMEPLATE, REGIONS, type Regime, type RegionImpact, SEVERITY_STOPS, type Shortage, US_REGIONS,
-    fmtAf, hooverCapacityMw, regimeLabel, regionImpacts, severityColor, severityLabel, shortageFor
+    DECLARED_TIERS, type DownstreamLake, type Flow, HOOVER_NAMEPLATE, REGIONS, type Regime, type RegionImpact, SEVERITY_STOPS,
+    type Shortage, US_REGIONS, downstreamFlows, downstreamLakes, fmtAf, hooverCapacityMw, regimeLabel, regionImpacts,
+    severityColor, severityLabel, shortageFor
 } from './impacts';
 import {loadRaster, registerTerrainProtocol} from './terrain';
 import {type Basemap, type MapHandles, type ViewId, createMap} from './map';
 import {TIMELINE_START, Timeline} from './timeline';
+import {type Camera, type UrlState, absoluteUrl, readUrl, writeUrl} from './urlState';
 
 interface State {
     mode: 'timeline' | 'manual';
@@ -19,7 +21,12 @@ interface State {
     manualElev: number;
     manualRegime: Regime;
     selected: string | null;
+    basemap: Basemap;
+    embed: boolean;
 }
+
+/** Regions whose share of a state cut is our approximation, not a published allocation */
+const ESTIMATED_SPLIT = new Set(['phx', 'pinal', 'socal', 'iid', 'cvwd', 'pvid']);
 
 const $ = <T extends HTMLElement = HTMLElement>(sel: string) => document.querySelector(sel) as T;
 const nf = new Intl.NumberFormat('en-US');
@@ -30,20 +37,55 @@ async function main() {
     const app = await loadData();
     const base = import.meta.env.BASE_URL + 'data/';
     const floorP = loadRaster(base + 'mead_floor.png');
-    registerTerrainProtocol(app.meta, floorP.then(r => r.raster));
+    registerTerrainProtocol(app.meta, floorP);
     const [wR, floorR] = await Promise.all([loadRaster(base + 'mead_w.png'), floorP]);
 
+    const url = readUrl();
     const state: State = {
         mode: 'timeline',
         t: app.lastObserved.t,
         scenario: 'most',
         manualElev: Math.round(app.lastObserved.elevation * 2) / 2,
         manualRegime: '2027',
-        selected: null
+        selected: null,
+        basemap: 'topo',
+        embed: false
     };
+    applyUrl(app, state, url);
+    if (state.embed) document.body.classList.add('embed');
+    $('#embed-bar').hidden = !state.embed;
 
-    const mapH = await createMap($('#map'), app, wR.raster, floorR.raster);
+    const brand = $('.brand');
+    new ResizeObserver(() => document.documentElement.style.setProperty('--brand-h', `${brand.offsetHeight}px`)).observe(brand);
+
+    const mapH = await createMap($('#map'), app, wR, floorR, {camera: url.cam, basemap: state.basemap});
+    const initialCam = mapH.getCamera();
+    const sameCam = (a: Camera, b: Camera) => Math.abs(a.center[0] - b.center[0]) < 1e-4 && Math.abs(a.center[1] - b.center[1]) < 1e-4
+        && Math.abs(a.zoom - b.zoom) < 0.01 && Math.abs(a.pitch - b.pitch) < 0.5 && Math.abs(a.bearing - b.bearing) < 0.5;
     (window as unknown as {mead: unknown}).mead = {map: mapH.map, state, app};
+    setSeg('basemap', state.basemap);
+    if (state.selected) mapH.selectRegion(state.selected, !url.cam);
+
+    const urlState = (): UrlState => ({
+        date: state.mode === 'timeline' && Math.abs(state.t - app.lastObserved.t) > 43200000 ? new Date(state.t).toISOString().slice(0, 10) : undefined,
+        level: state.mode === 'manual' ? state.manualElev : undefined,
+        rules: state.mode === 'manual' && state.manualRegime !== '2027' ? state.manualRegime : undefined,
+        fc: state.scenario !== 'most' ? state.scenario : undefined,
+        map: state.basemap !== 'topo' ? state.basemap : undefined,
+        region: state.selected ?? undefined,
+        cam: url.cam || !sameCam(mapH.getCamera(), initialCam) ? mapH.getCamera() : undefined,
+        embed: state.embed || undefined
+    });
+    mapH.map.on('moveend', () => writeUrl(urlState()));
+    window.addEventListener('hashchange', () => {
+        const u = readUrl();
+        applyUrl(app, state, u);
+        if (u.cam) mapH.map.jumpTo(u.cam);
+        mapH.setBasemap(state.basemap);
+        setSeg('basemap', state.basemap);
+        mapH.selectRegion(state.selected, false);
+        update();
+    });
 
     const timeline = new Timeline($('#tl-chart'), app, {
         onScrub(t) {
@@ -57,6 +99,8 @@ async function main() {
     renderAlert(app);
     renderLegend();
     wireControls(app, state, mapH, update);
+    wireDialogs(app, () => absoluteUrl({...urlState(), embed: undefined}), () => absoluteUrl({...urlState(), embed: true}));
+    if (url.about) ($('#about-dialog') as HTMLDialogElement).showModal();
     mapH.onRegionClick(id => select(id));
 
     function select(id: string | null) {
@@ -105,16 +149,86 @@ async function main() {
 
     function update() {
         const d = derive(app, state);
-        mapH.water.setLevel(d.elevation);
+        mapH.setLevel(d.elevation);
         mapH.updateImpacts(d.impacts);
+        mapH.updateFlows(d.flows);
         timeline.set(state.t, state.scenario, state.mode === 'manual', d.elevation);
         renderMetrics(app, state, d);
         renderImpacts(app, state, d, select);
+        if (state.embed) renderEmbedBar(d, absoluteUrl({...urlState(), embed: undefined}));
         syncControls(state, d.elevation);
+        writeUrl(urlState());
     }
 
     update();
     $('#loading').classList.add('done');
+}
+
+function applyUrl(app: AppData, s: State, u: UrlState) {
+    if (u.fc) s.scenario = u.fc;
+    if (u.rules) s.manualRegime = u.rules;
+    if (u.map) s.basemap = u.map;
+    s.embed = !!u.embed;
+    s.selected = u.region && REGIONS.some(r => r.id === u.region) ? u.region : null;
+    if (u.level !== undefined) {
+        s.mode = 'manual';
+        s.manualElev = Math.max(870, Math.min(FULL_POOL, u.level));
+    } else {
+        s.mode = 'timeline';
+        s.t = u.date ? Math.max(TIMELINE_START, Math.min(toT(u.date), lastForecastT(app))) : app.lastObserved.t;
+    }
+}
+
+function lastForecastT(app: AppData) {
+    return Math.max(...Object.values(app.scenarioSeries).map(x => x.t[x.t.length - 1]));
+}
+
+function renderEmbedBar(d: Derived, fullUrl: string) {
+    $('#embed-bar').innerHTML = `
+        <div class="eb-main">
+            <span class="eb-brand">MeadWatch</span>
+            <span class="eb-elev">${n1.format(d.elevation)} ft</span>
+            <span class="eb-sub">${d.source} · ${d.dateLabel.split(' · ')[0]} · ${d.shortage.tier}</span>
+        </div>
+        <a class="eb-link" href="${fullUrl}" target="_blank" rel="noopener">Open full app ↗</a>`;
+}
+
+let toastTimer = 0;
+function toast(msg: string) {
+    const el = $('#toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = window.setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+function wireDialogs(app: AppData, link: () => string, embedLink: () => string) {
+    const share = $('#share-dialog') as HTMLDialogElement;
+    const about = $('#about-dialog') as HTMLDialogElement;
+    $('#share-btn').addEventListener('click', () => {
+        $<HTMLInputElement>('#share-link').value = link();
+        $<HTMLTextAreaElement>('#share-embed').value =
+            `<iframe src="${embedLink()}" width="100%" height="560" style="border:0;border-radius:12px" title="MeadWatch: Lake Mead drought explorer" loading="lazy" allowfullscreen></iframe>`;
+        share.showModal();
+    });
+    share.querySelectorAll<HTMLButtonElement>('[data-copy]').forEach(b => b.addEventListener('click', async () => {
+        const field = $<HTMLInputElement>('#' + b.dataset.copy);
+        try {
+            await navigator.clipboard.writeText(field.value);
+            toast(b.dataset.copy === 'share-link' ? 'Link copied' : 'Embed code copied');
+        } catch {
+            field.select();
+            toast('Press Ctrl/⌘+C to copy');
+        }
+    }));
+    const fill = (k: string, v: string) => about.querySelectorAll(`[data-fill="${k}"]`).forEach(e => (e.textContent = v));
+    fill('latest', `${n1.format(app.lastObserved.elevation)} ft on ${dateFmt.format(new Date(app.lastObserved.t))}`);
+    fill('fetched', dateFmt.format(new Date(app.daily.fetched)));
+    fill('scenarios', app.forecast.scenarios.map(x => `${x.label} (${x.study})`).join(', '));
+    $('#about-btn').addEventListener('click', () => about.showModal());
+    for (const dlg of [share, about]) {
+        dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
+    }
 }
 
 interface Derived {
@@ -126,6 +240,8 @@ interface Derived {
     declared: boolean;
     shortage: Shortage;
     impacts: RegionImpact[];
+    flows: Flow[];
+    lakes: DownstreamLake[];
 }
 
 function derive(app: AppData, s: State): Derived {
@@ -133,7 +249,9 @@ function derive(app: AppData, s: State): Derived {
         const shortage = shortageFor(s.manualRegime, s.manualElev);
         return {
             elevation: s.manualElev, source: 'What-if level', dateLabel: 'Hypothetical lake level',
-            opYear: null, jan1: s.manualElev, declared: false, shortage, impacts: regionImpacts(s.manualElev, shortage)
+            opYear: null, jan1: s.manualElev, declared: false, shortage, impacts: regionImpacts(s.manualElev, shortage),
+            flows: downstreamFlows(s.manualElev, shortage, null),
+            lakes: downstreamLakes(s.manualElev, null, null, false)
         };
     }
     const elevation = elevationAt(app, s.t, s.scenario);
@@ -150,7 +268,10 @@ function derive(app: AppData, s: State): Derived {
         elevation,
         source: fc ? `Forecast · ${scen.label}` : 'Observed · USBR',
         dateLabel: dateFmt.format(new Date(s.t)) + (fc ? ` · ${scen.study} 24-Month Study` : ''),
-        opYear: year, jan1, declared: !!declared, shortage, impacts: regionImpacts(elevation, shortage)
+        opYear: year, jan1, declared: !!declared, shortage, impacts: regionImpacts(elevation, shortage),
+        flows: downstreamFlows(elevation, shortage, hooverReleaseMaf(app, s.t, s.scenario)),
+        lakes: fc ? downstreamLakes(elevation, null, null, false)
+            : downstreamLakes(elevation, app.mohave.t.length ? sample(app.mohave, s.t) : null, app.havasu.t.length ? sample(app.havasu, s.t) : null, true)
     };
 }
 
@@ -170,9 +291,11 @@ function renderLegend() {
     const sev = SEVERITY_STOPS.map(([v, c]) => `<span class="sev-chip" style="--c:${c}">${severityLabel(v)}</span>`).join('');
     $('#legend').innerHTML = `
         <div class="lg-row"><span class="lg-swatch water"></span>Water (shade = depth)</div>
-        <div class="lg-row"><span class="lg-swatch bed"></span>Exposed lakebed (former lake floor)</div>
-        <div class="lg-row"><span class="lg-swatch ghost"></span>Full pool, 1,229 ft</div>
-        <div class="lg-row"><span class="lg-swatch aq"></span>Aqueduct / river (schematic)</div>
+        <div class="lg-row"><span class="lg-swatch bed"></span>Exposed lakebed (bands every 10 ft)</div>
+        <div class="lg-row"><span class="lg-swatch shore"></span>Full-pool shoreline, 1,229 ft</div>
+        <div class="lg-row"><span class="lg-swatch th"></span>Shoreline at Tier 1 · intakes · power · dead pool</div>
+        <div class="lg-row"><span class="lg-swatch river"></span>Colorado River &amp; canals (OpenStreetMap)</div>
+        <div class="lg-row"><span class="lg-swatch aq"></span>Buried aqueduct (approximate route)</div>
         <div class="lg-sev">${sev}</div>
         <div class="lg-note">Region colour = scheduled reduction in Colorado River water, or physical supply risk</div>`;
 }
@@ -208,7 +331,7 @@ function renderMetrics(app: AppData, s: State, d: Derived) {
             <dl class="stats">
                 ${stat('Live storage', `${(live / 1e6).toFixed(2)} MAF`, `${Math.round(live / liveFull * 100)}% of full`, live / liveFull)}
                 ${stat('Surface area', `${nf.format(Math.round(area / 100) * 100)} ac`, `${Math.round(area / areaFull * 100)}% of full`, area / areaFull)}
-                ${stat('Hoover Dam capacity', `≈${nf.format(Math.round(mw / 10) * 10)} MW`, `${Math.round(mw / HOOVER_NAMEPLATE * 100)}% of 2,080 MW`, mw / HOOVER_NAMEPLATE, mw === 0 ? 'bad' : mw / HOOVER_NAMEPLATE < 0.6 ? 'warn' : '')}
+                ${stat('Hoover Dam capacity <span class="est">est.</span>', `≈${nf.format(Math.round(mw / 10) * 10)} MW`, `${Math.round(mw / HOOVER_NAMEPLATE * 100)}% of 2,080 MW`, mw / HOOVER_NAMEPLATE, mw === 0 ? 'bad' : mw / HOOVER_NAMEPLATE < 0.6 ? 'warn' : '')}
                 ${stat('Above min. power pool', aboveMin > 0 ? `${n1.format(aboveMin)} ft` : 'Below', '950 ft: turbines stop', null, aboveMin < 0 ? 'bad' : aboveMin < 60 ? 'warn' : '')}
                 ${stat('Above dead pool', aboveDead > 0 ? `${n1.format(aboveDead)} ft` : 'Dead pool', '895 ft: no release downstream', null, aboveDead < 0 ? 'bad' : aboveDead < 80 ? 'warn' : '')}
                 ${stat('SNWA intakes in water', `${intakes} of 3`, 'Las Vegas supply', null, intakes < 2 ? 'bad' : intakes < 3 ? 'warn' : '')}
@@ -268,6 +391,7 @@ function renderImpacts(app: AppData, s: State, d: Derived, select: (id: string |
             <div><b>${acHit >= 1e6 ? (acHit / 1e6).toFixed(2) + 'M' : nf.format(Math.round(acHit / 1000)) + 'k'}</b><span>irrigated acres facing cuts</span></div>
             <div><b>${Math.round(powerLoss * 100)}%</b><span>of Hoover capacity lost</span></div>
         </div>
+        ${flowSection(d)}
         <ul class="regions">
             ${sorted.map(r => {
                 const imp = byId.get(r.id)!;
@@ -277,13 +401,14 @@ function renderImpacts(app: AppData, s: State, d: Derived, select: (id: string |
                     <span class="rg-dot"></span>
                     <span class="rg-main">
                         <span class="rg-name">${r.short}<span class="rg-kind">${kind}</span><span class="rg-sev">${severityLabel(imp.severity)}</span></span>
-                        <span class="rg-status">${imp.status}</span>
+                        <span class="rg-status">${imp.status}${ESTIMATED_SPLIT.has(r.id) && (imp.cutAf ?? 0) > 0 ? ' <span class="est">est.</span>' : ''}</span>
                         <span class="rg-meta">${r.population ? `${fmtPeople(r.population)} people` : ''}${r.population && r.acres ? ' · ' : ''}${r.acres ? `${nf.format(r.acres)} acres` : ''}</span>
                     </span>
                     <span class="rg-bar"><i style="height:${Math.round((imp.severity ?? 0) * 100)}%"></i></span>
                 </button></li>`;
             }).join('')}
         </ul>
+        <p class="est-note"><span class="est">est.</span> = our split of a state-level cut, not an official allocation. <button class="btn-link" data-about>Methods</button></p>
         ${sel && selImp ? `<div class="rg-detail" style="--c:${severityColor(selImp.severity)}">
             <div class="rg-detail-head"><b>${sel.name}</b><button class="btn-link" data-close>Close</button></div>
             <p>${sel.blurb}</p>
@@ -297,7 +422,33 @@ function renderImpacts(app: AppData, s: State, d: Derived, select: (id: string |
 
     $('#impacts-body').querySelectorAll<HTMLButtonElement>('.rg').forEach(b => b.addEventListener('click', () => select(b.dataset.id!)));
     $('#impacts-body').querySelector('[data-close]')?.addEventListener('click', () => select(null));
+    $('#impacts-body').querySelector('[data-about]')?.addEventListener('click', () => ($('#about-dialog') as HTMLDialogElement).showModal());
     void app;
+}
+
+function flowSection(d: Derived) {
+    const r1 = d.flows.find(f => f.id === 'r1')!;
+    const note = d.flows[0].note;
+    const row = (f: Flow) => {
+        const pct = Math.round(f.ratio * 100);
+        const tone = f.dry ? 'bad' : f.ratio < 0.7 ? 'warn' : '';
+        return `<li class="fl ${tone}">
+            <span class="fl-name">${f.short}${f.observed ? ' <span class="obs">USBR</span>' : ' <span class="est">est.</span>'}</span>
+            <span class="fl-val">${f.dry ? 'Dry' : `${f.maf.toFixed(2)} <small>MAF/yr</small>`}</span>
+            <span class="fl-bar"><i style="width:${Math.min(100, pct)}%"></i></span>
+            <span class="fl-pct">${f.dry ? '0%' : `${pct}%`}</span>
+        </li>`;
+    };
+    return `<section class="flows" aria-label="Downstream river and canal flows">
+        <h3>River &amp; canal flows <span class="sub2">vs. normal (pre-shortage) deliveries</span></h3>
+        <ul>${d.flows.map(row).join('')}</ul>
+        ${note ? `<p class="fl-note bad">${note}</p>` : r1.observed
+            ? `<p class="fl-note">Hoover release over the past year: ${r1.maf.toFixed(2)} MAF (USBR${d.source.startsWith('Forecast') ? ' + 24-Month Study' : ''}). Canal flows are scheduled deliveries after cuts.</p>`
+            : `<p class="fl-note">Scheduled deliveries after this level’s cuts; actual releases also reflect voluntary conservation.</p>`}
+        <div class="lakes">${d.lakes.map(l => `<div class="lake ${l.status.startsWith('No inflow') ? 'bad' : ''}">
+            <b>${l.name}</b> <span>${l.elevation !== null ? `${n1.format(l.elevation)} ft` : `normal ${l.range[0]}–${l.range[1]} ft`}</span>
+            <small>${l.dam} · ${l.status}</small></div>`).join('')}</div>
+    </section>`;
 }
 
 function fmtPeople(n: number) {
@@ -330,8 +481,10 @@ function syncControls(s: State, elevation: number) {
 
 function wireControls(app: AppData, s: State, m: MapHandles, update: () => void) {
     document.querySelectorAll<HTMLButtonElement>('#basemap button').forEach(b => b.addEventListener('click', () => {
-        setSeg('basemap', b.dataset.v!);
-        m.setBasemap(b.dataset.v as Basemap);
+        s.basemap = b.dataset.v as Basemap;
+        setSeg('basemap', s.basemap);
+        m.setBasemap(s.basemap);
+        update();
     }));
     document.querySelectorAll<HTMLButtonElement>('#views button').forEach(b => b.addEventListener('click', () => m.setView(b.dataset.v as ViewId)));
     $<HTMLInputElement>('#terrain').addEventListener('change', e => m.setTerrain((e.target as HTMLInputElement).checked));

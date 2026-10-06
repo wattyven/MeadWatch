@@ -6,6 +6,7 @@
 // Municipal service areas are unions of US Census county boundaries (us-atlas,
 // 1:10m). Irrigation districts and aqueduct alignments are hand-traced,
 // simplified outlines -- schematic, good to a few km, not survey boundaries.
+// Rivers and canals are built separately by scripts/build_waterways.mjs.
 
 import {readFile, writeFile} from 'node:fs/promises';
 import {feature} from 'topojson-client';
@@ -102,39 +103,12 @@ const regions = [
     }
 ];
 
+// River and canal alignments come from OpenStreetMap via scripts/build_waterways.mjs;
+// only the short SNWA intake pipeline is drawn here.
 const aqueducts = [
-    {
-        id: 'cra', name: 'Colorado River Aqueduct', to: 'socal',
-        coords: [[-114.155, 34.317], [-114.40, 34.24], [-114.75, 34.17], [-115.13, 34.12], [-115.40, 33.97],
-            [-115.48, 33.86], [-115.63, 33.72], [-115.95, 33.78], [-116.30, 33.90], [-116.60, 33.90],
-            [-116.95, 33.83], [-117.22, 33.86], [-117.45, 33.83]]
-    },
-    {
-        id: 'cap', name: 'Central Arizona Project canal', to: 'phx',
-        coords: [[-114.13, 34.30], [-113.95, 34.08], [-113.62, 33.86], [-113.25, 33.70], [-112.75, 33.72],
-            [-112.27, 33.85], [-112.00, 33.75], [-111.80, 33.60], [-111.70, 33.40], [-111.60, 33.15],
-            [-111.45, 32.90], [-111.25, 32.60], [-111.10, 32.30], [-111.05, 32.05]]
-    },
-    {
-        id: 'aac', name: 'All-American Canal', to: 'iid',
-        coords: [[-114.47, 32.88], [-114.62, 32.74], [-114.85, 32.70], [-115.10, 32.68], [-115.35, 32.70],
-            [-115.60, 32.71]]
-    },
-    {
-        id: 'coachella', name: 'Coachella Canal', to: 'cvwd',
-        coords: [[-115.00, 32.70], [-115.08, 32.90], [-115.22, 33.10], [-115.45, 33.32], [-115.75, 33.50],
-            [-116.00, 33.62], [-116.18, 33.72]]
-    },
     {
         id: 'snwa', name: 'SNWA intake pipelines', to: 'lv',
         coords: [[-114.79, 36.075], [-114.88, 36.06], [-114.97, 36.07], [-115.08, 36.12]]
-    },
-    {
-        id: 'river', name: 'Colorado River below Hoover Dam', to: null,
-        coords: [[-114.738, 36.016], [-114.74, 35.85], [-114.67, 35.50], [-114.571, 35.197], [-114.58, 34.99],
-            [-114.60, 34.84], [-114.49, 34.72], [-114.36, 34.50], [-114.14, 34.296], [-114.29, 34.15],
-            [-114.52, 33.95], [-114.53, 33.61], [-114.50, 33.30], [-114.62, 33.03], [-114.465, 32.883],
-            [-114.62, 32.73], [-114.73, 32.70], [-114.80, 32.50]]
     }
 ];
 
