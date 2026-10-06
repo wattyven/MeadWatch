@@ -43,6 +43,10 @@ npm run dev          # http://localhost:5173
 npm run build        # static site in dist/ (relative paths, host anywhere)
 ```
 
+### Deploying to GitHub Pages
+
+The app has to be built before it can be served: the raw `index.html` loads `src/main.ts`, which browsers can't run. `.github/workflows/deploy.yml` builds the site and publishes `dist/` on every push to `main`. To use it, go to **Settings → Pages → Build and deployment** and set **Source** to **GitHub Actions**. Don't use "Deploy from a branch".
+
 The app needs network access for map tiles, terrain and fonts. Everything else is bundled in `public/data/`. The browser needs WebGL2.
 
 ### Tests
