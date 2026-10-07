@@ -27,7 +27,7 @@ function widthByFlow(extra: number, z5: number, z9: number, z13: number): maplib
 
 /** Where each reach's or canal's flow label sits. */
 const FLOW_ANCHORS: Record<string, [number, number]> = {
-    r1: [-114.57, 34.95], cap: [-113.05, 33.72], cra: [-115.78, 33.78], r2: [-114.55, 33.82],
+    r1: [-114.57, 34.95], cap: [-113.8, 33.97], cra: [-115.78, 33.78], r2: [-114.55, 33.82],
     aac: [-115.05, 32.66], coachella: [-115.62, 33.40], r3: [-114.75, 32.56]
 };
 
@@ -370,13 +370,13 @@ export async function createMap(container: HTMLElement, app: AppData, w: Raster,
                         const imp = byId.get(region);
                         map.setFeatureState({source, id: aq}, {color: imp ? severityColor(imp.severity) : '#5cc8e0'});
                     }
-                    const features = REGIONS.map(r => {
+                    const features = REGIONS.flatMap(r => {
                         const imp = byId.get(r.id)!;
-                        return {
+                        return (r.labels ?? [{at: r.center, name: r.short}]).map(l => ({
                             type: 'Feature' as const,
-                            properties: {name: r.short, status: imp.short},
-                            geometry: {type: 'Point' as const, coordinates: r.center}
-                        };
+                            properties: {name: l.name, status: imp.short, rid: r.id},
+                            geometry: {type: 'Point' as const, coordinates: l.at}
+                        }));
                     });
                     (map.getSource('labels') as maplibregl.GeoJSONSource).setData({type: 'FeatureCollection', features});
                 },
@@ -386,8 +386,8 @@ export async function createMap(container: HTMLElement, app: AppData, w: Raster,
                         const scale = f.dry ? 0.55 : 0.35 + 0.65 * Math.sqrt(Math.min(1.2, f.ratio));
                         map.setFeatureState({source: 'waterways', id: f.id}, {scale, dry: f.dry});
                     }
-                    const fmt = (f: Flow) => f.dry ? 'dry: no release from Hoover'
-                        : `${f.maf.toFixed(2)} MAF/yr${Math.abs(f.ratio - 1) >= 0.01 ? ` (${f.ratio < 1 ? '−' : '+'}${Math.round(Math.abs(1 - f.ratio) * 100)}%)` : ''}`;
+                    const fmt = (f: Flow) => f.dry ? 'dry: no water released'
+                        : `${f.maf.toFixed(2)} MAF a year${Math.abs(f.ratio - 1) >= 0.01 ? `, ${Math.round(Math.abs(1 - f.ratio) * 100)}% ${f.ratio < 1 ? 'below' : 'above'} normal` : ', normal'}`;
                     (map.getSource('flowlabels') as maplibregl.GeoJSONSource).setData({
                         type: 'FeatureCollection',
                         features: flows.map(f => ({

@@ -107,7 +107,7 @@ const regions = [
 // only the short SNWA intake pipeline is drawn here.
 const aqueducts = [
     {
-        id: 'snwa', name: 'SNWA intake pipelines', to: 'lv',
+        id: 'snwa', name: 'Las Vegas water pipelines', to: 'lv',
         coords: [[-114.79, 36.075], [-114.88, 36.06], [-114.97, 36.07], [-115.08, 36.12]]
     }
 ];
@@ -117,9 +117,9 @@ const points = [
     {id: 'davis', kind: 'dam', name: 'Davis Dam', coords: [-114.5710, 35.1970]},
     {id: 'parker', kind: 'dam', name: 'Parker Dam', coords: [-114.1397, 34.2961]},
     {id: 'imperial', kind: 'dam', name: 'Imperial Dam', coords: [-114.4650, 32.8830]},
-    {id: 'intakes', kind: 'intake', name: 'SNWA Intakes 1–3', coords: [-114.7930, 36.0760]},
-    {id: 'wilmer', kind: 'intake', name: 'CAP Mark Wilmer Pumping Plant', coords: [-114.1300, 34.3020]},
-    {id: 'whitsett', kind: 'intake', name: 'MWD Whitsett Intake', coords: [-114.1560, 34.3170]}
+    {id: 'intakes', kind: 'intake', name: 'Las Vegas water intakes', coords: [-114.7930, 36.0760]},
+    {id: 'wilmer', kind: 'intake', name: 'Central Arizona Project pumps', coords: [-114.1300, 34.3020]},
+    {id: 'whitsett', kind: 'intake', name: 'Southern California aqueduct intake', coords: [-114.1560, 34.3170]}
 ];
 
 const basinLabels = [

@@ -151,81 +151,86 @@ export interface RegionInfo {
     hooverShare?: string;
     basis: string;
     blurb: string;
+    /** where the map flies when the region is selected */
     center: [number, number];
     zoom: number;
+    /** label positions, each inside the region's own shaded area (default: one label at center) */
+    labels?: {at: [number, number]; name: string}[];
 }
 
 export const REGIONS: RegionInfo[] = [
     {
-        id: 'lv', name: 'Las Vegas Valley', short: 'Las Vegas', kind: 'city', state: 'NV',
+        id: 'lv', name: 'Las Vegas Valley', short: 'Las Vegas Valley', kind: 'city', state: 'NV',
         population: 2_400_000, acres: 0, supplyAf: 300_000, dependence: '~90% of supply pumped straight from Lake Mead',
         hooverShare: 'Nevada holds ~23% of Hoover power',
-        basis: 'Nevada reduction ÷ Nevada’s 300,000 AF apportionment; intake depths from SNWA.',
+        basis: 'Nevada’s cut compared with its 300,000 acre-foot yearly share of the river. Intake depths come from the Southern Nevada Water Authority.',
         blurb: 'Southern Nevada Water Authority draws from three intakes in Boulder Basin. Intake 1 sits at 1,050 ft, Intake 2 at 1,000 ft. The “third straw” Intake 3 (860 ft) and its low-lake-level pumping station keep water flowing down to ~875 ft.',
         center: [-115.1, 36.15], zoom: 9.5
     },
     {
-        id: 'phx', name: 'Phoenix & Tucson (CAP cities and tribes)', short: 'Phoenix · Tucson', kind: 'city', state: 'AZ',
+        id: 'phx', name: 'Phoenix & Tucson (Central Arizona Project cities and tribes)', short: 'Phoenix & Tucson', kind: 'city', state: 'AZ',
         population: 5_900_000, acres: 0, supplyAf: 1_000_000, dependence: 'CAP is ~40% of Arizona’s water use; Tucson relies on it almost entirely',
         hooverShare: 'Arizona holds ~19% of Hoover power',
-        basis: 'Arizona reduction beyond the first 512,000 AF (absorbed by CAP agriculture and excess pools) ÷ ~1.0 MAF CAP municipal + tribal deliveries.',
+        basis: 'Arizona’s first 512,000 acre-feet of cuts fall on farms and other lower-priority users. Anything beyond that is compared with the roughly 1 million acre-feet the Central Arizona Project normally delivers to cities and tribes.',
         blurb: 'The 336-mile Central Arizona Project lifts water ~2,900 ft from Lake Havasu to Phoenix and Tucson. CAP holds junior priority, so Arizona’s cuts land on it first.',
-        center: [-111.8, 33.0], zoom: 7.4
+        center: [-111.8, 33.0], zoom: 7.4,
+        // Maricopa and Pima counties wrap around Pinal County, so label each city on its own county
+        labels: [{at: [-112.1, 33.5], name: 'Phoenix'}, {at: [-110.95, 32.2], name: 'Tucson'}]
     },
     {
-        id: 'pinal', name: 'Central Arizona farms (Pinal County)', short: 'Pinal farms', kind: 'farm', state: 'AZ',
+        id: 'pinal', name: 'Pinal County farms, central Arizona', short: 'Pinal County farms', kind: 'farm', state: 'AZ',
         population: 0, acres: 300_000, supplyAf: 300_000, dependence: 'CAP water was the main surface supply; now largely groundwater',
-        basis: 'CAP agricultural pool is the first to be eliminated: Arizona reduction ÷ 512,000 AF (Tier 1 eliminates it).',
+        basis: 'Water set aside for central Arizona farms is the first to be cut: Arizona’s first 512,000 acre-feet of cuts come from it, so a Tier 1 shortage or worse removes it entirely.',
         blurb: 'Cotton, alfalfa and dairy feed farms that lost most of their CAP water when Tier 1 began in 2022, and are fallowing fields or pumping groundwater.',
         center: [-111.75, 32.87], zoom: 8.6
     },
     {
-        id: 'socal', name: 'Southern California (Metropolitan Water District)', short: 'Southern California', kind: 'city', state: 'CA',
+        id: 'socal', name: 'Southern California cities (Metropolitan Water District)', short: 'Southern California', kind: 'city', state: 'CA',
         population: 19_000_000, acres: 0, supplyAf: 950_000, dependence: 'Colorado River Aqueduct supplies ~25–30% of the region',
         hooverShare: 'MWD, LADWP, SCE and cities hold ~57% of Hoover power; MWD uses it to pump the aqueduct',
-        basis: 'Illustrative: 60% of California’s reduction ÷ ~950,000 AF Colorado River Aqueduct deliveries.',
+        basis: 'An illustrative split: 60% of California’s cut, compared with the roughly 950,000 acre-feet the Colorado River Aqueduct normally carries.',
         blurb: 'Metropolitan pumps Lake Havasu water 242 miles over the desert to 26 member agencies from Ventura to San Diego.',
         center: [-117.6, 33.95], zoom: 7.3
     },
     {
-        id: 'iid', name: 'Imperial Valley (IID)', short: 'Imperial Valley', kind: 'farm', state: 'CA',
+        id: 'iid', name: 'Imperial Valley farms (Imperial Irrigation District)', short: 'Imperial Valley farms', kind: 'farm', state: 'CA',
         population: 180_000, acres: 475_000, supplyAf: 2_500_000, dependence: 'Colorado River is the only source of water',
-        basis: 'Illustrative: 30% of California’s reduction ÷ ~2.5 MAF IID use. IID holds senior (1901) rights.',
+        basis: 'An illustrative split: 30% of California’s cut, compared with the district’s usual 2.5 million acre-feet. Its rights date to 1901, among the oldest on the river.',
         blurb: 'The largest single user of Colorado River water. The All-American Canal carries ~2.5 MAF a year to winter vegetables, alfalfa and cattle feed.',
         center: [-115.55, 32.95], zoom: 8.7
     },
     {
-        id: 'cvwd', name: 'Coachella Valley', short: 'Coachella', kind: 'mixed', state: 'CA',
+        id: 'cvwd', name: 'Coachella Valley (Palm Springs area)', short: 'Coachella Valley', kind: 'mixed', state: 'CA',
         population: 450_000, acres: 70_000, supplyAf: 350_000, dependence: 'Coachella Canal supplies most farm water and recharges the aquifer',
-        basis: 'Illustrative: 7% of California’s reduction ÷ ~350,000 AF CVWD use.',
+        basis: 'An illustrative split: 7% of California’s cut, compared with the valley’s usual 350,000 acre-feet.',
         blurb: 'Dates, citrus, grapes and table vegetables, plus Palm Springs-area cities that recharge their aquifer with Colorado River water.',
         center: [-116.2, 33.65], zoom: 8.8
     },
     {
-        id: 'pvid', name: 'Palo Verde Valley', short: 'Palo Verde', kind: 'farm', state: 'CA',
+        id: 'pvid', name: 'Palo Verde Valley farms (Blythe)', short: 'Palo Verde Valley farms', kind: 'farm', state: 'CA',
         population: 20_000, acres: 104_000, supplyAf: 400_000, dependence: 'Colorado River is the only source',
-        basis: 'Illustrative: 3% of California’s reduction ÷ ~400,000 AF. Holds 1877 senior rights; mostly paid fallowing.',
+        basis: 'An illustrative split: 3% of California’s cut, compared with its usual 400,000 acre-feet. Its rights date to 1877; most of its savings come from farmers paid to leave fields unplanted.',
         blurb: 'Alfalfa and hay around Blythe, irrigated by gravity from the river under some of the oldest rights on the Colorado.',
         center: [-114.62, 33.58], zoom: 9.5
     },
     {
-        id: 'crit', name: 'Colorado River Indian Tribes', short: 'CRIT', kind: 'farm', state: 'AZ',
+        id: 'crit', name: 'Colorado River Indian Tribes (Parker Valley)', short: 'Colorado River Indian Tribes', kind: 'farm', state: 'AZ',
         population: 9_000, acres: 79_000, supplyAf: 660_000, dependence: 'Decreed (1865-priority) Colorado River rights',
-        basis: 'Senior present-perfected rights: no scheduled reductions; exposed only when releases are physically limited.',
+        basis: 'Its rights are older than the rules that share out shortages, so it isn’t cut under them. It is affected only if Hoover Dam physically can’t release enough water.',
         blurb: 'The Mohave, Chemehuevi, Hopi and Navajo people of the Parker Valley farm ~79,000 acres under some of the most senior rights on the river.',
         center: [-114.35, 34.0], zoom: 9.6
     },
     {
-        id: 'yuma', name: 'Yuma & Gila valleys', short: 'Yuma', kind: 'mixed', state: 'AZ',
+        id: 'yuma', name: 'Yuma & Gila valleys', short: 'Yuma area', kind: 'mixed', state: 'AZ',
         population: 210_000, acres: 230_000, supplyAf: 1_000_000, dependence: 'Colorado River is the only source',
-        basis: 'Arizona’s senior mainstem priorities (pre-1968): no scheduled reductions; exposed only when releases are physically limited.',
+        basis: 'Its rights are older than the Central Arizona Project’s (from before 1968), so it isn’t cut under the shortage rules. It is affected only if Hoover Dam physically can’t release enough water.',
         blurb: 'Grows most of America’s winter lettuce and leafy greens. Senior rights shield Yuma from shortage tiers, but every drop must still pass Hoover Dam.',
         center: [-114.4, 32.72], zoom: 9
     },
     {
-        id: 'mexico', name: 'Mexicali Valley & Tijuana (Mexico)', short: 'Mexico', kind: 'intl', state: 'MX',
+        id: 'mexico', name: 'Mexicali Valley & Tijuana (Mexico)', short: 'Mexico (Mexicali & Tijuana)', kind: 'intl', state: 'MX',
         population: 3_000_000, acres: 500_000, supplyAf: 1_500_000, dependence: '1.5 MAF a year under the 1944 Treaty',
-        basis: 'Minute 323 reductions under 2007 rules; Minute 334 (Sept 2026) terms are not modeled here.',
+        basis: 'Cuts follow the U.S.–Mexico agreement Minute 323 in years under the 2007 rules. The terms of the September 2026 agreement, Minute 334, aren’t modelled.',
         blurb: 'Mexico receives water at Morelos Dam below Yuma. Reductions are negotiated through the International Boundary and Water Commission.',
         center: [-115.2, 32.35], zoom: 8.5
     }
@@ -286,26 +291,59 @@ export function regionImpacts(h: number, s: Shortage): RegionImpact[] {
         if (cutFrac === null && physSev > 0) severity = physSev;
 
         const pct = cutFrac ? Math.round(cutFrac * 100) : 0;
+        const plPct = pl !== null ? Math.round(pl * 100) : 0;
         const parts: string[] = [];
         let short: string;
         if (severity === null) {
-            parts.push('Reductions set by IBWC Minute 334 (not modeled)');
-            short = 'Minute 334';
+            parts.push('Mexico’s 2027–28 share of the cuts is set by a U.S.–Mexico agreement (Minute 334) that isn’t modelled here');
+            short = 'Cut not modelled';
         } else if (physSev >= 1) {
             parts.push(physical!);
-            short = 'No supply';
+            short = 'No water arrives';
         } else {
-            if (cut && cutFrac! > 0.005) parts.push(`−${fmtAf(cut)} AF/yr (${pct}% of its river water)`);
+            if (cut && cutFrac! > 0.005) {
+                parts.push(cutFrac! >= 0.995
+                    ? `Gets ${fmtAfLong(cut)} acre-feet less river water a year: none of its usual Colorado River supply`
+                    : `Gets ${fmtAfLong(cut)} acre-feet less river water a year (${pct}% of its usual Colorado River supply)`);
+            }
             if (physical) parts.push(physical);
-            if (!parts.length) parts.push(r.id === 'crit' || r.id === 'yuma' ? 'Senior rights: no scheduled cuts' : 'No scheduled water cut');
-            if (pl !== null && pl > 0.02) parts.push(`Hoover power −${Math.round(pl * 100)}%`);
-            short = cut && cutFrac! > 0.005 ? `−${pct}% river water`
+            if (!parts.length) parts.push(r.id === 'crit' || r.id === 'yuma' ? 'Protected by senior water rights: no cut scheduled' : 'No water cut scheduled at this level');
+            if (pl !== null && pl > 0.02) parts.push(`Hoover Dam is making ${plPct}% less power, so less low-cost electricity reaches its utilities`);
+            short = cut && cutFrac! > 0.005 ? (cutFrac! >= 0.995 ? 'All river water cut' : `${pct}% less river water`)
                 : physSev > 0 ? 'Supply at risk'
-                    : pl !== null && pl > 0.05 ? `Hoover power −${Math.round(pl * 100)}%` : 'No cut';
+                    : pl !== null && pl > 0.05 ? `${plPct}% less Hoover power` : 'No water cut';
         }
         const waterAffected = (cutFrac ?? 0) >= 0.02 || physSev > 0;
         return {id: r.id, severity, cutAf: cut, cutFrac, powerLossFrac: pl, physical, physSev, waterAffected, status: parts.join(' · '), short};
     });
+}
+
+/** 21000 -> "21,000"; 1250000 -> "1.25 million" */
+export function fmtAfLong(v: number) {
+    if (v >= 1e6) return `${(v / 1e6).toFixed(2).replace(/\.?0+$/, '')} million`;
+    const r = v >= 1e5 ? Math.round(v / 1e4) * 1e4 : v >= 1e4 ? Math.round(v / 1e3) * 1e3 : Math.round(v / 100) * 100;
+    return r.toLocaleString('en-US');
+}
+
+/** One plain sentence on what this region's numbers mean in practice. */
+export function impactMeaning(r: RegionInfo, imp: RegionImpact): string {
+    const cut = imp.cutFrac ?? 0;
+    const homes = imp.cutAf ? Math.round(imp.cutAf * 2 / 1000) * 1000 : 0;
+    const homesTxt = homes >= 1000 ? ` That much water would supply roughly ${homes.toLocaleString('en-US')} homes for a year.` : '';
+    if (imp.severity === null) return 'Mexico takes reductions under its own treaty agreements with the United States.';
+    if (imp.physSev >= 1) return r.id === 'lv'
+        ? 'The lake has dropped below Las Vegas’s deepest pumps, so the valley would have to rely on limited groundwater and stored supplies.'
+        : 'No water can leave Lake Mead, so canals and the river downstream would run dry except for local inflows and groundwater.';
+    if (cut >= 0.995) return `None of its usual Colorado River water arrives. ${r.kind === 'farm' ? 'Farmers pump groundwater where they can or leave fields unplanted.' : 'It must rely on groundwater, recycled and stored water.'}${homesTxt}`;
+    if (cut > 0.005) {
+        const how = r.kind === 'farm' ? 'Farms make up the gap by leaving some fields unplanted (often paid to) or pumping groundwater.'
+            : r.kind === 'city' ? 'Cities make up the gap with conservation, groundwater and water banked in earlier years.'
+                : 'The gap is met by leaving some fields unplanted, conservation and groundwater.';
+        return `It receives ${Math.round(cut * 100)}% less Colorado River water than usual. ${how}${homesTxt}`;
+    }
+    if (imp.physSev > 0) return 'No cut is scheduled, but Hoover Dam may not physically be able to release all of the water ordered.';
+    if ((imp.powerLossFrac ?? 0) > 0.05) return `Water deliveries are unaffected, but Hoover Dam’s smaller power output means its utilities buy more replacement electricity, usually at higher cost.`;
+    return r.id === 'crit' || r.id === 'yuma' ? 'Older (senior) water rights are served first, so this area keeps its full supply until the lake falls much further.' : 'Its Colorado River supply is not cut at this level.';
 }
 
 export function fmtAf(v: number) {
@@ -389,13 +427,13 @@ export function downstreamFlows(h: number, s: Shortage, observedHooverMaf: numbe
         return {id, name, short, maf: v, normal, ratio: normal ? v / normal : 0, dry: dead || v < 0.01, note, observed: obs};
     };
     return [
-        mk('r1', 'Colorado River below Hoover Dam', 'Below Hoover', r1, n1, observed),
-        mk('cap', 'Central Arizona Project canal', 'CAP canal', cap, NORMAL_FLOW.cap),
-        mk('cra', 'Colorado River Aqueduct', 'Colorado River Aqueduct', cra, NORMAL_FLOW.cra),
-        mk('r2', 'Colorado River below Parker Dam', 'Below Parker', r2, n2),
+        mk('r1', 'Colorado River below Hoover Dam', 'River below Hoover Dam', r1, n1, observed),
+        mk('cap', 'Central Arizona Project canal', 'Central Arizona canal', cap, NORMAL_FLOW.cap),
+        mk('cra', 'Colorado River Aqueduct', 'Southern California aqueduct', cra, NORMAL_FLOW.cra),
+        mk('r2', 'Colorado River below Parker Dam', 'River below Parker Dam', r2, n2),
         mk('aac', 'All-American Canal', 'All-American Canal', aac, NORMAL_FLOW.aac),
         mk('coachella', 'Coachella Canal', 'Coachella Canal', coachella, NORMAL_FLOW.coachella),
-        mk('r3', 'Colorado River below Imperial Dam (to Yuma & Mexico)', 'Below Imperial', r3, n3)
+        mk('r3', 'Colorado River below Imperial Dam (to Yuma & Mexico)', 'River to Yuma & Mexico', r3, n3)
     ];
 }
 

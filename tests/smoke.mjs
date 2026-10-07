@@ -192,6 +192,25 @@ const fresh = async (hash, viewport = {width: 1400, height: 900}) => {
         for (const f of d.features) if (f.properties.kind === 'river' && !f.properties.gap) for (const [, la] of f.geometry.coordinates) if (la > 33.33 && la < 33.43) n++;
         return n;
     });
+    const labels = await p.evaluate(async () => {
+        const m = window.mead.map;
+        m.jumpTo({center: [-114.5, 33.4], zoom: 6, pitch: 0, bearing: 0});
+        await new Promise(r => m.once('idle', r));
+        const inRing = (pt, r) => { let c = false; for (let i = 0, j = r.length - 1; i < r.length; j = i++) { const [xi, yi] = r[i], [xj, yj] = r[j]; if ((yi > pt[1]) !== (yj > pt[1]) && pt[0] < (xj - xi) * (pt[1] - yi) / (yj - yi) + xi) c = !c; } return c; };
+        const inGeom = (pt, g) => (g.type === 'Polygon' ? [g.coordinates] : g.coordinates).some(poly => inRing(pt, poly[0]) && !poly.slice(1).some(h => inRing(pt, h)));
+        const regions = window.mead.app.regions.features.filter(f => f.properties.layer === 'region');
+        const bad = [];
+        const seen = new Set();
+        for (const f of m.querySourceFeatures('labels')) {
+            const pt = f.geometry.coordinates, rid = f.properties.rid, key = rid + f.properties.name;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            const hits = regions.filter(r => inGeom(pt, r.geometry)).map(r => r.properties.id);
+            if (!hits.includes(rid) || hits.length > 1) bad.push(`${f.properties.name}→${hits.join('+') || 'none'}`);
+        }
+        return {n: seen.size, bad};
+    });
+    check('every region label sits on its own shaded area only', labels.n >= 11 && labels.bad.length === 0, `${labels.n} labels; ${labels.bad.join(', ') || 'all inside their own area'}`);
     check('river is drawn continuously through the Cibola reach', cibola > 10, `${cibola} vertices between 33.33°N and 33.43°N`);
     check('OpenFreeMap vector basemap + terrain relief loaded', vector);
     const tiles = await p.evaluate(() => performance.getEntriesByType('resource').map(r => r.name).filter(n => /opentopomap|tile\.openstreetmap\.org/.test(n)).length);
@@ -334,7 +353,7 @@ const fresh = async (hash, viewport = {width: 1400, height: 900}) => {
     const p = await fresh('');
     const today = await p.evaluate(() => [...document.querySelectorAll('.fl')].map(li => li.querySelector('.fl-name').textContent.trim() + '=' + li.querySelector('.fl-val').textContent.trim()));
     check('flows panel lists the river reaches and four aqueducts', today.length === 7, today.join(' | '));
-    check('flow below Hoover uses observed USBR releases today', /Below Hoover USBR=\d\.\d\d/.test(today[0]), today[0]);
+    check('flow below Hoover uses observed USBR releases today', /below Hoover Dam USBR=\d\.\d\d/.test(today[0]), today[0]);
     await p.fill('#elev-input', '890');
     await p.press('#elev-input', 'Enter');
     await p.waitForTimeout(500);

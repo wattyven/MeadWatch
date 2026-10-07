@@ -7,7 +7,7 @@ import {
 import {
     DECLARED_TIERS, type DownstreamLake, type Flow, HOOVER_NAMEPLATE, REGIONS, type Regime, type RegionImpact, SEVERITY_STOPS,
     type Shortage, US_REGIONS, downstreamFlows, downstreamLakes, fmtAf, hooverCapacityMw, regimeLabel, regionImpacts,
-    severityColor, severityLabel, shortageFor
+    severityColor, severityLabel, shortageFor, impactMeaning
 } from './impacts';
 import {loadRaster, registerTerrainProtocol} from './terrain';
 import {type Basemap, type MapHandles, type ViewId, createMap} from './map';
@@ -453,9 +453,21 @@ function renderImpacts(app: AppData, s: State, d: Derived, select: (id: string |
         <div class="kpis">
             <div><b>${(popHit / 1e6).toFixed(1)}M</b><span>people facing water cuts or supply risk</span></div>
             <div><b>${acHit >= 1e6 ? (acHit / 1e6).toFixed(2) + 'M' : nf.format(Math.round(acHit / 1000)) + 'k'}</b><span>irrigated acres facing cuts</span></div>
-            <div><b>${Math.round(powerLoss * 100)}%</b><span>of Hoover capacity lost</span></div>
+            <div><b>${Math.round(powerLoss * 100)}%</b><span>less power from Hoover Dam</span></div>
         </div>
         ${flowSection(d)}
+        <details class="howto" ${howtoOpen ? 'open' : ''}>
+            <summary>How to read these numbers</summary>
+            <ul>
+                <li><b>“Gets 21,000 acre-feet less river water a year”</b> is the region’s ${term('water-cut', 'water cut')}: how much less Colorado River water it receives this year under the rules.
+                    An ${term('acre-foot', 'acre-foot')} is roughly a year’s water for two homes. The percentage is the share of its usual river supply; “none of its usual supply” means it gets no Colorado River water at all.</li>
+                <li><b>“Hoover Dam is making 37% less power”</b> is a ${term('hoover-power-loss', 'power loss')}, not a water cut. A lower lake pushes Hoover’s turbines with less force, so the dam makes less electricity.
+                    Utilities in that region that buy Hoover power get less of it and buy replacement power, usually at higher cost.</li>
+                <li><b>The colour and level</b> (Minimal to Critical) follow the region’s ${term('impact-level', 'biggest problem')}: its water cut, its loss of Hoover power, or the risk that the dam can’t deliver water at all.</li>
+                <li>${term('est', 'est.').replace('class="term"', 'class="term est"')} marks MeadWatch’s own estimates, such as how a state’s cut is split among its cities and farms. ${term('senior-rights', 'Senior water rights')} explain why some regions are cut later. <button class="btn-link" data-about>Methods</button></li>
+            </ul>
+        </details>
+        <p class="list-hint">Click a region for what its numbers mean in practice.</p>
         <ul class="regions">
             ${sorted.map(r => {
                 const imp = byId.get(r.id)!;
@@ -472,13 +484,14 @@ function renderImpacts(app: AppData, s: State, d: Derived, select: (id: string |
                 </button></li>`;
             }).join('')}
         </ul>
-        <p class="est-note">${term('est', 'est.').replace('class="term"', 'class="term est"')} = MeadWatch’s split of a state’s cut, not an official allocation. ${term('senior-rights', 'Senior rights')} explain why some regions are cut later. <button class="btn-link" data-about>Methods</button></p>
         ${sel && selImp ? `<div class="rg-detail" style="--c:${severityColor(selImp.severity)}">
             <div class="rg-detail-head"><b>${sel.name}</b><button class="btn-link" data-close>Close</button></div>
+            <p class="rg-meaning"><b>What this means:</b> ${linkTerms(impactMeaning(sel, selImp))}</p>
             <p>${linkTerms(sel.blurb)}</p>
             <dl>
+                <dt>Right now</dt><dd>${linkTerms(selImp.status)}</dd>
                 <dt>Dependence</dt><dd>${linkTerms(sel.dependence)}</dd>
-                ${sel.hooverShare ? `<dt>Hydropower</dt><dd>${sel.hooverShare}. At this level Hoover has lost ~${Math.round((selImp.powerLossFrac ?? 0) * 100)}% of its capacity.</dd>` : ''}
+                ${sel.hooverShare ? `<dt>Hydropower</dt><dd>${sel.hooverShare}. At this level Hoover Dam can make about ${Math.round((selImp.powerLossFrac ?? 0) * 100)}% less power than when the lake is full, so those utilities get less low-cost electricity.</dd>` : ''}
                 ${selImp.physical ? `<dt>Infrastructure</dt><dd>${selImp.physical}</dd>` : ''}
                 <dt>How this is estimated</dt><dd>${sel.basis}</dd>
             </dl>
@@ -487,6 +500,7 @@ function renderImpacts(app: AppData, s: State, d: Derived, select: (id: string |
     $('#impacts-body').querySelectorAll<HTMLButtonElement>('.rg').forEach(b => b.addEventListener('click', () => select(b.dataset.id!)));
     $('#impacts-body').querySelector('[data-close]')?.addEventListener('click', () => select(null));
     $('#impacts-body').querySelector('[data-about]')?.addEventListener('click', () => ($('#about-dialog') as HTMLDialogElement).showModal());
+    $('#impacts-body').querySelector('.howto')?.addEventListener('toggle', e => { howtoOpen = (e.target as HTMLDetailsElement).open; });
     void app;
 }
 
@@ -521,12 +535,17 @@ function linkTerms(text: string) {
         [/\bCentral Arizona Project\b|\bCAP\b/, 'cap'], [/\bMetropolitan\b/, 'mwd'], [/\bAll-American Canal\b/, 'iid'],
         [/\bCoachella Canal\b/, 'cvwd'], [/senior (?:\(\d{4}\) )?rights|senior present-perfected rights|most senior rights|oldest rights/, 'senior-rights'],
         [/\bjunior priority\b/, 'senior-rights'], [/\bTier 1\b/, 'shortage-tier'], [/\bMAF\b|\bmaf\b/, 'maf'],
-        [/\bthird straw\b/, 'snwa-intakes'], [/\bSouthern Nevada Water Authority\b/, 'snwa-intakes'], [/\b1944 Treaty\b/, 'apportionment']
+        [/\bthird straw\b/, 'snwa-intakes'], [/\bSouthern Nevada Water Authority\b/, 'snwa-intakes'], [/\b1944 Treaty\b/, 'apportionment'],
+        [/\bacre-feet\b/, 'acre-foot'], [/Hoover Dam is making \d+% less power/, 'hoover-power-loss'], [/\bMinute 3(?:23|34)\b/, 'minute'],
+        [/\bgroundwater\b/, 'groundwater'], [/\bunplanted\b/, 'fallowing']
     ];
     let out = text;
     for (const [re, id] of map) out = out.replace(re, m => term(id, m));
     return out;
 }
+
+/** "How to read these numbers" stays open or closed across panel redraws. */
+let howtoOpen = true;
 
 function fmtPeople(n: number) {
     return n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : `${Math.round(n / 1000)}k`;

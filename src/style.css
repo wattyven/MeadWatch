@@ -373,6 +373,15 @@ body.embed .maplibregl-ctrl-top-right { top: var(--gap); right: var(--gap); }
 .lake span { font-variant-numeric: tabular-nums; font-weight: 650; }
 .lake small { color: var(--faint); font-size: 10px; line-height: 1.25; }
 .lake.bad small { color: #ffb4ab; }
+.howto { margin: 0 0 8px; border: 1px solid rgba(92, 200, 224, 0.3); border-radius: 10px; background: rgba(92, 200, 224, 0.06); }
+.howto summary { cursor: pointer; padding: 7px 10px; font-weight: 600; font-size: 12.5px; color: #cfe9f2; list-style: none; }
+.howto summary::-webkit-details-marker { display: none; }
+.howto summary::before { content: '▸ '; color: var(--accent); }
+.howto[open] summary::before { content: '▾ '; }
+.howto ul { margin: 0; padding: 0 10px 9px 26px; display: grid; gap: 6px; font-size: 12px; color: #c9d3df; line-height: 1.45; }
+.howto b { color: var(--text); font-weight: 600; }
+.list-hint { margin: 0 0 6px; font-size: 11px; color: var(--faint); }
+.rg-meaning { color: var(--text) !important; background: rgba(255, 255, 255, 0.04); border-radius: 6px; padding: 6px 8px; }
 .regions { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; }
 .rg {
     width: 100%;
