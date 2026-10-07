@@ -35,6 +35,9 @@
             <p class="tagline">Lake Mead drought explorer</p>
         </div>
         <div class="brand-actions">
+            <button class="icon-btn" id="help-btn" title="How to use MeadWatch, and what the terms mean" aria-label="Guide and glossary">
+                <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="8" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7.6 7.6a2.5 2.5 0 1 1 3.4 2.3c-.6.3-1 .8-1 1.5v.6M10 14.6v.1" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            </button>
             <button class="icon-btn" id="share-btn" title="Share or embed this view" aria-label="Share or embed this view">
                 <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M14 13a3 3 0 0 0-2.2 1l-4.9-2.5a3 3 0 0 0 0-1l4.9-2.5A3 3 0 1 0 11 6.5l-4.9 2.5a3 3 0 1 0 0 2l4.9 2.5A3 3 0 1 0 14 13z" fill="currentColor"/></svg>
             </button>
@@ -44,6 +47,10 @@
         </div>
     </div>
     <div class="alert" id="alert"></div>
+    <div class="guide-hint" id="guide-hint" hidden>
+        <span>New to water terms? Underlined words explain themselves, and the guide covers the rest.</span>
+        <span class="gh-actions"><button class="btn" data-open>Open guide</button><button class="btn-link" data-dismiss>Dismiss</button></span>
+    </div>
 </header>
 
 <div class="toolbar panel" role="toolbar" aria-label="Map options">
@@ -81,6 +88,32 @@
 
 <div class="embed-bar panel" id="embed-bar" hidden></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="term-tip" id="term-tip" role="tooltip" hidden></div>
+
+<dialog id="guide-dialog" class="dialog wide" aria-labelledby="guide-title">
+    <form method="dialog" class="dlg-head"><h2 id="guide-title">Guide</h2><button class="icon-btn" aria-label="Close">✕</button></form>
+    <div class="guide-tabs" role="tablist">
+        <button type="button" role="tab" data-tab="start" aria-selected="true">How to use MeadWatch</button>
+        <button type="button" role="tab" data-tab="glossary" aria-selected="false">Glossary</button>
+    </div>
+    <div id="guide-start" class="guide-start">
+        <p class="lead">Lake Mead stores the Colorado River water that Las Vegas, Phoenix, Tucson, Southern California and some of the country’s biggest farm valleys rely on. MeadWatch shows how full it is, where it’s heading, and who feels it.</p>
+        <ol class="steps">
+            <li><b>Read the map.</b> Blue is water; darker blue is deeper. <span class="sw bed"></span> White is lakebed that used to be under water, banded every 10 ft. The dark outline is the shoreline when the lake is full. Drag to move, right-drag or two-finger drag to tilt, and scroll to zoom.</li>
+            <li><b>Move through time.</b> Drag across the chart at the bottom to pick a date between 2000 and 2028, or press ▶ to play. Past the dashed “today” line, the yellow lines are Reclamation’s official forecasts.</li>
+            <li><b>Zoom into a period.</b> Drag across the thin strip under the chart, or type a From and To month. Press <i>Reset view</i> to see the whole timeline again.</li>
+            <li><b>Ask “what if?”</b> Choose <i>What-if level</i> and slide or type any lake level, from full (1,229 ft) to empty (870 ft).</li>
+            <li><b>Check the vital signs.</b> The left panel shows the level, how much water is left, Hoover Dam’s power, and how close the lake is to the levels where power stops (950 ft) and water stops flowing out (895 ft).</li>
+            <li><b>See who’s affected.</b> The right panel and the coloured areas on the map show each region’s water cut, from <span class="chip" style="--c:#4fb39a">minimal</span> to <span class="chip" style="--c:#9b1d3a">critical</span>. Click a region for details. Line widths on the river and canals show how much water is flowing.</li>
+        </ol>
+        <p class="note">Words with a dotted underline explain themselves when you hover or tap them. Numbers marked <span class="est">est.</span> are MeadWatch’s estimates; sources and methods are under <i>About</i> (ⓘ).</p>
+    </div>
+    <div id="guide-glossary" hidden>
+        <input type="search" id="glossary-search" class="gl-search" placeholder="Search terms, e.g. dead pool, acre-foot, CAP" aria-label="Search the glossary"/>
+        <dl id="glossary-list" class="gl-list"></dl>
+        <p id="glossary-empty" class="dlg-note" hidden>No matching terms.</p>
+    </div>
+</dialog>
 
 <dialog id="share-dialog" class="dialog" aria-labelledby="share-title">
     <form method="dialog" class="dlg-head"><h2 id="share-title">Share this view</h2><button class="icon-btn" aria-label="Close">✕</button></form>
@@ -147,12 +180,13 @@
         </div>
         <label class="field" id="scenario-field">Forecast
             <select id="scenario">
-                <option value="most">Most probable · 6.0 maf Powell release</option>
-                <option value="most7">Most probable · 7.0 maf Powell release</option>
-                <option value="min">Probable minimum (dry)</option>
-                <option value="max">Probable maximum (wet)</option>
+                <option value="most">Most likely · less water from Lake Powell (6.0 maf)</option>
+                <option value="most7">Most likely · more water from Lake Powell (7.0 maf)</option>
+                <option value="min">Dry-year forecast</option>
+                <option value="max">Wet-year forecast</option>
             </select>
         </label>
+        <button type="button" class="help-dot" data-term="forecast" aria-label="What are the forecasts?" title="What are the forecasts?">?</button>
         <div class="elev-control">
             <label for="elev-input" class="field-label">Water level</label>
             <input type="range" id="elev-slider" min="870" max="1229" step="0.5" aria-label="Water level slider (feet)"/>
@@ -162,9 +196,11 @@
             <button data-v="2027" class="on" role="radio" aria-checked="true">2027–28 rules</button>
             <button data-v="2007" role="radio" aria-checked="false">2007 rules + DCP</button>
         </div>
-        <div class="seg small" id="span" role="radiogroup" aria-label="Timeline range">
-            <button data-v="all" class="on" role="radio" aria-checked="true">Since 2000</button>
-            <button data-v="recent" role="radio" aria-checked="false">Since 2021</button>
+        <button type="button" class="help-dot" id="rules-help" data-term="rules" aria-label="What are the operating rules?" title="What are the operating rules?" hidden>?</button>
+        <div class="tl-window" role="group" aria-label="Time window">
+            <label class="field">From <input type="month" id="win-from" min="2000-01" max="2028-08"/></label>
+            <label class="field">to <input type="month" id="win-to" min="2000-01" max="2028-08"/></label>
+            <button id="win-reset" class="btn-link" title="Show the whole timeline, 2000–2028">Reset view</button>
         </div>
         <button id="today" class="btn-link">Jump to today</button>
     </div>

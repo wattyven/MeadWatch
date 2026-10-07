@@ -11,8 +11,9 @@ import {
 } from './impacts';
 import {loadRaster, registerTerrainProtocol} from './terrain';
 import {type Basemap, type MapHandles, type ViewId, createMap} from './map';
-import {type Span, Timeline} from './timeline';
+import {Timeline, type Window} from './timeline';
 import {type Camera, type UrlState, absoluteUrl, readUrl, writeUrl} from './urlState';
+import {initGlossary, term} from './glossary';
 
 interface State {
     mode: 'timeline' | 'manual';
@@ -23,11 +24,24 @@ interface State {
     selected: string | null;
     basemap: Basemap;
     embed: boolean;
-    span: Span;
+    /** visible timeline window; null = whole record */
+    window: Window;
 }
 
 /** Regions whose share of a state cut is our approximation, not a published allocation */
 const ESTIMATED_SPLIT = new Set(['phx', 'pinal', 'socal', 'iid', 'cvwd', 'pvid']);
+
+/** Plain names for Reclamation's forecast runs (the official names are in the glossary). */
+const PLAIN_SCENARIO: Record<ScenarioId, string> = {
+    min: 'Dry-year forecast',
+    most: 'Most likely forecast · 6.0 maf from Lake Powell',
+    most7: 'Most likely forecast · 7.0 maf from Lake Powell',
+    max: 'Wet-year forecast'
+};
+const SHORT_SCENARIO: Record<ScenarioId, string> = {min: 'dry year', most: 'most likely (6.0 maf)', most7: 'most likely (7.0 maf)', max: 'wet year'};
+const SCENARIO_TERM: Record<ScenarioId, string> = {min: 'dry-forecast', most: 'most-likely', most7: 'most-likely', max: 'wet-forecast'};
+const REGIME_TERM: Record<Regime, string> = {pre2007: 'pre2007', '2007': 'interim-guidelines', '2027': 'operating-guidelines'};
+const STATE_NAMES: Record<string, string> = {AZ: 'Arizona', CA: 'California', NV: 'Nevada', MX: 'Mexico'};
 
 const $ = <T extends HTMLElement = HTMLElement>(sel: string) => document.querySelector(sel) as T;
 const nf = new Intl.NumberFormat('en-US');
@@ -51,7 +65,7 @@ async function main() {
         selected: null,
         basemap: 'topo',
         embed: false,
-        span: 'all'
+        window: null
     };
     applyUrl(app, state, url);
     if (state.embed) document.body.classList.add('embed');
@@ -75,7 +89,8 @@ async function main() {
         fc: state.scenario !== 'most' ? state.scenario : undefined,
         map: state.basemap !== 'topo' ? state.basemap : undefined,
         region: state.selected ?? undefined,
-        span: state.span,
+        from: state.window ? iso(state.window[0]) : undefined,
+        to: state.window ? iso(state.window[1]) : undefined,
         cam: url.cam || !sameCam(mapH.getCamera(), initialCam) ? mapH.getCamera() : undefined,
         embed: state.embed || undefined
     });
@@ -96,11 +111,39 @@ async function main() {
             state.mode = 'timeline';
             state.t = t;
             update();
+        },
+        onWindow(w) {
+            setWindow(w);
         }
     });
+    state.window = timeline.normalize(state.window);
+
+    /** Change the visible window; keeps the playhead inside it. */
+    function setWindow(w: Window) {
+        state.window = timeline.normalize(w);
+        if (state.mode === 'timeline' && state.window && (state.t < state.window[0] || state.t > state.window[1])) {
+            const today = app.lastObserved.t;
+            state.t = today >= state.window[0] && today <= state.window[1] ? today : state.window[0];
+        }
+        update();
+    }
+    const winFrom = $<HTMLInputElement>('#win-from'), winTo = $<HTMLInputElement>('#win-to');
+    const fromMonth = (v: string, end: boolean) => {
+        const [y, mo] = v.split('-').map(Number);
+        return end ? Date.UTC(y, mo, 0, 12) : Date.UTC(y, mo - 1, 1, 12);
+    };
+    const onMonth = () => {
+        if (!winFrom.value || !winTo.value) return;
+        stopPlay();
+        setWindow([fromMonth(winFrom.value, false), fromMonth(winTo.value, true)]);
+    };
+    winFrom.addEventListener('change', onMonth);
+    winTo.addEventListener('change', onMonth);
+    $('#win-reset').addEventListener('click', () => setWindow(null));
 
     renderAlert(app);
     renderLegend();
+    initGlossary();
     wireControls(app, state, mapH, update);
     wireDialogs(app, () => absoluteUrl({...urlState(), embed: undefined}), () => absoluteUrl({...urlState(), embed: true}));
     if (url.about) ($('#about-dialog') as HTMLDialogElement).showModal();
@@ -125,8 +168,8 @@ async function main() {
     playBtn.addEventListener('click', () => {
         if (raf) return stopPlay();
         state.mode = 'timeline';
-        if (state.t >= timeline.end - 86400000 || state.t < timeline.start) state.t = timeline.start;
-        const msPerMs = (timeline.end - timeline.start) / 22000; // the whole range plays in ~22 s
+        if (state.t >= timeline.stop - 86400000 || state.t < timeline.start) state.t = timeline.start;
+        const msPerMs = (timeline.stop - timeline.start) / 22000; // the visible window plays in ~22 s
         playBtn.classList.add('is-playing');
         playBtn.setAttribute('aria-label', 'Pause timeline');
         let last = performance.now();
@@ -134,8 +177,8 @@ async function main() {
             const dt = Math.min(64, now - last);
             last = now;
             state.t += dt * msPerMs;
-            if (state.t >= timeline.end) {
-                state.t = timeline.end;
+            if (state.t >= timeline.stop) {
+                state.t = timeline.stop;
                 update();
                 return stopPlay();
             }
@@ -148,6 +191,7 @@ async function main() {
         stopPlay();
         state.mode = 'timeline';
         state.t = app.lastObserved.t;
+        if (state.window && (state.t < state.window[0] || state.t > state.window[1])) state.window = null;
         update();
     });
 
@@ -156,12 +200,21 @@ async function main() {
         mapH.setLevel(d.elevation);
         mapH.updateImpacts(d.impacts);
         mapH.updateFlows(d.flows);
-        timeline.set(state.t, state.scenario, state.mode === 'manual', d.elevation, state.span);
+        timeline.set(state.t, state.scenario, state.mode === 'manual', d.elevation, state.window);
+        syncWindowInputs();
         renderMetrics(app, state, d);
         renderImpacts(app, state, d, select);
         if (state.embed) renderEmbedBar(d, absoluteUrl({...urlState(), embed: undefined}));
         syncControls(state, d.elevation);
         writeUrl(urlState());
+    }
+
+    function syncWindowInputs() {
+        const [a, b] = [timeline.start, timeline.stop];
+        const ym = (t: number) => new Date(t).toISOString().slice(0, 7);
+        if (document.activeElement !== winFrom) winFrom.value = ym(a);
+        if (document.activeElement !== winTo) winTo.value = ym(b);
+        $<HTMLButtonElement>('#win-reset').disabled = !state.window;
     }
 
     update();
@@ -172,7 +225,7 @@ function applyUrl(app: AppData, s: State, u: UrlState) {
     if (u.fc) s.scenario = u.fc;
     if (u.rules) s.manualRegime = u.rules;
     if (u.map) s.basemap = u.map;
-    s.span = u.span ?? 'all';
+    s.window = u.from && u.to ? [toT(u.from), toT(u.to)] : null;
     s.embed = !!u.embed;
     s.selected = u.region && REGIONS.some(r => r.id === u.region) ? u.region : null;
     if (u.level !== undefined) {
@@ -181,9 +234,11 @@ function applyUrl(app: AppData, s: State, u: UrlState) {
     } else {
         s.mode = 'timeline';
         s.t = u.date ? Math.max(app.observed.t[0], Math.min(toT(u.date), lastForecastT(app))) : app.lastObserved.t;
-        if (s.span === 'recent' && s.t < toT('2021-10-01')) s.span = 'all';
+        if (s.window && (s.t < s.window[0] || s.t > s.window[1])) s.window = null;
     }
 }
+
+const iso = (t: number) => new Date(t).toISOString().slice(0, 10);
 
 function lastForecastT(app: AppData) {
     return Math.max(...Object.values(app.scenarioSeries).map(x => x.t[x.t.length - 1]));
@@ -240,6 +295,8 @@ function wireDialogs(app: AppData, link: () => string, embedLink: () => string) 
 interface Derived {
     elevation: number;
     source: string;
+    /** same as source, with glossary links */
+    sourceHtml: string;
     dateLabel: string;
     opYear: number | null;
     jan1: number;
@@ -254,7 +311,7 @@ function derive(app: AppData, s: State): Derived {
     if (s.mode === 'manual') {
         const shortage = shortageFor(s.manualRegime, s.manualElev);
         return {
-            elevation: s.manualElev, source: 'What-if level', dateLabel: 'Hypothetical lake level',
+            elevation: s.manualElev, source: 'What-if level', sourceHtml: 'What-if level', dateLabel: 'Hypothetical lake level',
             opYear: null, jan1: s.manualElev, declared: false, shortage, impacts: regionImpacts(s.manualElev, shortage),
             flows: downstreamFlows(s.manualElev, shortage, null),
             lakes: downstreamLakes(s.manualElev, null, null, false)
@@ -272,8 +329,9 @@ function derive(app: AppData, s: State): Derived {
     const fc = isForecast(app, s.t);
     return {
         elevation,
-        source: fc ? `Forecast · ${scen.label}${scen.detail ? ` (${scen.detail.replace(' Powell release', '')})` : ''}` : 'Observed · USBR',
-        dateLabel: dateFmt.format(new Date(s.t)) + (fc ? ` · ${scen.study} 24-Month Study` : ''),
+        source: fc ? PLAIN_SCENARIO[s.scenario] : 'Observed · USBR',
+        sourceHtml: fc ? `Forecast · ${term(SCENARIO_TERM[s.scenario], SHORT_SCENARIO[s.scenario])}` : `Observed · ${term('usbr', 'USBR')}`,
+        dateLabel: dateFmt.format(new Date(s.t)) + (fc ? ` · Reclamation’s ${scen.study} ${term('forecast', '24-Month Study')}` : ''),
         opYear: year, jan1, declared: !!declared, shortage, impacts: regionImpacts(elevation, shortage),
         flows: downstreamFlows(elevation, shortage, hooverReleaseMaf(app, s.t, s.scenario)),
         lakes: fc ? downstreamLakes(elevation, null, null, false)
@@ -297,13 +355,13 @@ function renderLegend() {
     const sev = SEVERITY_STOPS.map(([v, c]) => `<span class="sev-chip" style="--c:${c}">${severityLabel(v)}</span>`).join('');
     $('#legend').innerHTML = `
         <div class="lg-row"><span class="lg-swatch water"></span>Water (shade = depth)</div>
-        <div class="lg-row"><span class="lg-swatch bed"></span>Exposed lakebed (bands every 10 ft)</div>
-        <div class="lg-row"><span class="lg-swatch shore"></span>Full-pool shoreline, 1,229 ft</div>
-        <div class="lg-row"><span class="lg-swatch th"></span>Shoreline at Tier 1 · intakes · power · dead pool</div>
+        <div class="lg-row"><span class="lg-swatch bed"></span>${term('bathtub-ring', 'Exposed lakebed')} (bands every 10 ft)</div>
+        <div class="lg-row"><span class="lg-swatch shore"></span>Shoreline when ${term('full-pool', 'full')} (1,229 ft)</div>
+        <div class="lg-row"><span class="lg-swatch th"></span>Shoreline at ${term('shortage-tier', 'Tier 1')} · ${term('snwa-intakes', 'intakes')} · ${term('min-power-pool', 'power')} · ${term('dead-pool', 'dead pool')}</div>
         <div class="lg-row"><span class="lg-swatch river"></span>Colorado River &amp; canals (OpenStreetMap)</div>
         <div class="lg-row"><span class="lg-swatch aq"></span>Buried aqueduct (approximate route)</div>
         <div class="lg-sev">${sev}</div>
-        <div class="lg-note">Region colour = scheduled reduction in Colorado River water, or physical supply risk</div>`;
+        <div class="lg-note">Region colour = how much of its Colorado River water is cut, or at risk</div>`;
 }
 
 function stat(label: string, value: string, sub = '', bar: number | null = null, tone = '') {
@@ -327,32 +385,32 @@ function renderMetrics(app: AppData, s: State, d: Derived) {
     const cuts = [['AZ', sh.az], ['CA', sh.ca], ['NV', sh.nv], ['MX', sh.mx]] as const;
 
     $('#metrics-body').innerHTML = `
-        <div class="m-kicker ${d.source.startsWith('Forecast') ? 'fc' : d.source.startsWith('What') ? 'wi' : ''}">${d.source}</div>
+        <div class="m-kicker ${d.source.startsWith('Observed') ? '' : d.source.startsWith('What') ? 'wi' : 'fc'}">${d.sourceHtml}</div>
         <div class="m-elev"><span class="m-big">${nf.format(Math.round(h * 10) / 10)}</span><span class="m-unit">ft</span></div>
         <div class="m-date">${d.dateLabel}</div>
-        <div class="m-delta"><b>${n1.format(FULL_POOL - h)} ft</b> below full pool ·
+        <div class="m-delta"><b>${n1.format(FULL_POOL - h)} ft</b> below ${term('full-pool', 'full')} ·
             ${vsRecord < 0 ? `<b class="neg">${n1.format(-vsRecord)} ft below</b> the record low` : `${n1.format(vsRecord)} ft above the record low`}</div>
         <div class="m-grid">
             ${gauge(h)}
             <dl class="stats">
-                ${stat('Live storage', `${(live / 1e6).toFixed(2)} MAF`, `${Math.round(live / liveFull * 100)}% of full`, live / liveFull)}
-                ${stat('Surface area', `${nf.format(Math.round(area / 100) * 100)} ac`, `${Math.round(area / areaFull * 100)}% of full`, area / areaFull)}
-                ${stat('Hoover Dam capacity <span class="est">est.</span>', `≈${nf.format(Math.round(mw / 10) * 10)} MW`, `${Math.round(mw / HOOVER_NAMEPLATE * 100)}% of 2,080 MW`, mw / HOOVER_NAMEPLATE, mw === 0 ? 'bad' : mw / HOOVER_NAMEPLATE < 0.6 ? 'warn' : '')}
-                ${stat('Above min. power pool', aboveMin > 0 ? `${n1.format(aboveMin)} ft` : 'Below', '950 ft: turbines stop', null, aboveMin < 0 ? 'bad' : aboveMin < 60 ? 'warn' : '')}
-                ${stat('Above dead pool', aboveDead > 0 ? `${n1.format(aboveDead)} ft` : 'Dead pool', '895 ft: no release downstream', null, aboveDead < 0 ? 'bad' : aboveDead < 80 ? 'warn' : '')}
-                ${stat('SNWA intakes in water', `${intakes} of 3`, 'Las Vegas supply', null, intakes < 2 ? 'bad' : intakes < 3 ? 'warn' : '')}
+                ${stat(term('live-storage', 'Water in storage'), `${(live / 1e6).toFixed(2)} ${term('maf', 'MAF')}`, `${Math.round(live / liveFull * 100)}% of full`, live / liveFull)}
+                ${stat(term('surface-area', 'Surface area'), `${nf.format(Math.round(area / 100) * 100)} acres`, `${Math.round(area / areaFull * 100)}% of full`, area / areaFull)}
+                ${stat(`${term('hoover-capacity', 'Hoover power capacity')} ${term('est', 'est.').replace('class="term"', 'class="term est"')}`, `≈${nf.format(Math.round(mw / 10) * 10)} MW`, `${Math.round(mw / HOOVER_NAMEPLATE * 100)}% of 2,080 MW`, mw / HOOVER_NAMEPLATE, mw === 0 ? 'bad' : mw / HOOVER_NAMEPLATE < 0.6 ? 'warn' : '')}
+                ${stat(term('min-power-pool', 'Above power shut-off'), aboveMin > 0 ? `${n1.format(aboveMin)} ft` : 'Below', '950 ft: Hoover’s turbines stop', null, aboveMin < 0 ? 'bad' : aboveMin < 60 ? 'warn' : '')}
+                ${stat(term('dead-pool', 'Above dead pool'), aboveDead > 0 ? `${n1.format(aboveDead)} ft` : 'Dead pool', '895 ft: no water flows downstream', null, aboveDead < 0 ? 'bad' : aboveDead < 80 ? 'warn' : '')}
+                ${stat(term('snwa-intakes', 'Las Vegas intakes in water'), `${intakes} of 3`, 'pipes at three depths', null, intakes < 2 ? 'bad' : intakes < 3 ? 'warn' : '')}
             </dl>
         </div>
         <div class="op-card">
             <div class="op-head">
-                <span>${d.opYear ? `${d.opYear} operating year` : 'Rules applied to this level'}</span>
-                <span class="op-tier">${sh.tier}</span>
+                <span>${d.opYear ? `${d.opYear} ${term('operating-year', 'operating year')}` : `${term('rules', 'Rules')} applied to this level`}</span>
+                <span class="op-tier">${term(sh.regime === '2027' ? 'shortage-condition' : 'shortage-tier', sh.tier)}</span>
             </div>
-            <div class="op-rules">${regimeLabel[sh.regime]}${d.declared ? ` · ${sh.tier === 'Normal' ? 'condition' : 'tier'} declared by Reclamation for ${d.opYear}`
+            <div class="op-rules">${term(REGIME_TERM[sh.regime], regimeLabel[sh.regime])}${d.declared ? ` · ${sh.tier === 'Normal' ? 'condition' : 'tier'} declared by Reclamation for ${d.opYear}`
                 : d.opYear && sh.regime === '2007' ? ` · from ${n1.format(d.jan1)} ft on Jan 1` : ''}</div>
-            <div class="op-cuts">${cuts.map(([k, v]) => `<div><span>${k}</span><b>${v === null ? '—' : v === 0 ? '0' : '−' + fmtAf(v)}</b></div>`).join('')}</div>
-            <div class="op-unit">Scheduled reductions, acre-feet per year${sh.mx === null ? ' · Mexico: IBWC Minute 334, not modeled' : ''}</div>
-            ${sh.consult ? `<div class="op-consult">${sh.consult}</div>` : ''}
+            <div class="op-cuts">${cuts.map(([k, v]) => `<div title="${STATE_NAMES[k]}"><span>${k}</span><b>${v === null ? '—' : v === 0 ? '0' : '−' + fmtAf(v)}</b></div>`).join('')}</div>
+            <div class="op-unit">Scheduled cuts, ${term('acre-foot', 'acre-feet')} per year${sh.mx === null ? ` · Mexico: ${term('minute', 'Minute 334')}, not modelled` : ''}</div>
+            ${sh.consult ? `<div class="op-consult">${term('consultation', 'Emergency talks')}: ${sh.consult}</div>` : ''}
         </div>`;
 }
 
@@ -414,12 +472,12 @@ function renderImpacts(app: AppData, s: State, d: Derived, select: (id: string |
                 </button></li>`;
             }).join('')}
         </ul>
-        <p class="est-note"><span class="est">est.</span> = our split of a state-level cut, not an official allocation. <button class="btn-link" data-about>Methods</button></p>
+        <p class="est-note">${term('est', 'est.').replace('class="term"', 'class="term est"')} = MeadWatch’s split of a state’s cut, not an official allocation. ${term('senior-rights', 'Senior rights')} explain why some regions are cut later. <button class="btn-link" data-about>Methods</button></p>
         ${sel && selImp ? `<div class="rg-detail" style="--c:${severityColor(selImp.severity)}">
             <div class="rg-detail-head"><b>${sel.name}</b><button class="btn-link" data-close>Close</button></div>
-            <p>${sel.blurb}</p>
+            <p>${linkTerms(sel.blurb)}</p>
             <dl>
-                <dt>Dependence</dt><dd>${sel.dependence}</dd>
+                <dt>Dependence</dt><dd>${linkTerms(sel.dependence)}</dd>
                 ${sel.hooverShare ? `<dt>Hydropower</dt><dd>${sel.hooverShare}. At this level Hoover has lost ~${Math.round((selImp.powerLossFrac ?? 0) * 100)}% of its capacity.</dd>` : ''}
                 ${selImp.physical ? `<dt>Infrastructure</dt><dd>${selImp.physical}</dd>` : ''}
                 <dt>How this is estimated</dt><dd>${sel.basis}</dd>
@@ -439,22 +497,35 @@ function flowSection(d: Derived) {
         const pct = Math.round(f.ratio * 100);
         const tone = f.dry ? 'bad' : f.ratio < 0.7 ? 'warn' : '';
         return `<li class="fl ${tone}">
-            <span class="fl-name">${f.short}${f.observed ? ' <span class="obs">USBR</span>' : ' <span class="est">est.</span>'}</span>
+            <span class="fl-name">${f.short}${f.observed ? ` ${term('usbr', 'USBR').replace('class="term"', 'class="term obs"')}` : ` ${term('est', 'est.').replace('class="term"', 'class="term est"')}`}</span>
             <span class="fl-val">${f.dry ? 'Dry' : `${f.maf.toFixed(2)} <small>MAF/yr</small>`}</span>
             <span class="fl-bar"><i style="width:${Math.min(100, pct)}%"></i></span>
             <span class="fl-pct">${f.dry ? '0%' : `${pct}%`}</span>
         </li>`;
     };
     return `<section class="flows" aria-label="Downstream river and canal flows">
-        <h3>River &amp; canal flows <span class="sub2">vs. normal (pre-shortage) deliveries</span></h3>
+        <h3>River &amp; canal flows <span class="sub2">in ${term('maf', 'MAF')} per year, vs. ${term('normal-deliveries', 'normal')}</span></h3>
         <ul>${d.flows.map(row).join('')}</ul>
         ${note ? `<p class="fl-note bad">${note}</p>` : r1.observed
             ? `<p class="fl-note">Hoover release over the past year: ${r1.maf.toFixed(2)} MAF (USBR${d.source.startsWith('Forecast') ? ' + 24-Month Study' : ''}). Canal flows are scheduled deliveries after cuts.</p>`
-            : `<p class="fl-note">Scheduled deliveries after this level’s cuts; actual releases also reflect voluntary conservation.</p>`}
+            : `<p class="fl-note">Scheduled deliveries after this level’s cuts; actual releases are also lowered by ${term('system-conservation', 'voluntary conservation')}.</p>`}
         <div class="lakes">${d.lakes.map(l => `<div class="lake ${l.status.startsWith('No inflow') ? 'bad' : ''}">
             <b>${l.name}</b> <span>${l.elevation !== null ? `${n1.format(l.elevation)} ft` : `normal ${l.range[0]}–${l.range[1]} ft`}</span>
-            <small>${l.dam} · ${l.status}</small></div>`).join('')}</div>
+            <small>${l.dam} · ${l.status.replace('normal operating range', term('operating-range', 'normal operating range'))}</small></div>`).join('')}</div>
     </section>`;
+}
+
+/** Link the first mention of known acronyms and terms in a region's prose to the glossary. */
+function linkTerms(text: string) {
+    const map: [RegExp, string][] = [
+        [/\bCentral Arizona Project\b|\bCAP\b/, 'cap'], [/\bMetropolitan\b/, 'mwd'], [/\bAll-American Canal\b/, 'iid'],
+        [/\bCoachella Canal\b/, 'cvwd'], [/senior (?:\(\d{4}\) )?rights|senior present-perfected rights|most senior rights|oldest rights/, 'senior-rights'],
+        [/\bjunior priority\b/, 'senior-rights'], [/\bTier 1\b/, 'shortage-tier'], [/\bMAF\b|\bmaf\b/, 'maf'],
+        [/\bthird straw\b/, 'snwa-intakes'], [/\bSouthern Nevada Water Authority\b/, 'snwa-intakes'], [/\b1944 Treaty\b/, 'apportionment']
+    ];
+    let out = text;
+    for (const [re, id] of map) out = out.replace(re, m => term(id, m));
+    return out;
 }
 
 function fmtPeople(n: number) {
@@ -475,10 +546,10 @@ function setSeg(id: string, v: string) {
 function syncControls(s: State, elevation: number) {
     setSeg('mode', s.mode);
     setSeg('regime', s.manualRegime);
-    setSeg('span', s.span);
     const sel = $<HTMLSelectElement>('#scenario');
     if (sel.value !== s.scenario) sel.value = s.scenario;
     $('#regime').hidden = s.mode !== 'manual';
+    $('#rules-help').hidden = s.mode !== 'manual';
     $('#scenario-field').classList.toggle('dim', s.mode === 'manual');
     const slider = $<HTMLInputElement>('#elev-slider');
     const input = $<HTMLInputElement>('#elev-input');
@@ -503,10 +574,6 @@ function wireControls(app: AppData, s: State, m: MapHandles, update: () => void)
         const v = b.dataset.v as State['mode'];
         if (v === 'manual' && s.mode !== 'manual') s.manualElev = Math.round(elevationAt(app, s.t, s.scenario) * 2) / 2;
         s.mode = v;
-        update();
-    }));
-    document.querySelectorAll<HTMLButtonElement>('#span button').forEach(b => b.addEventListener('click', () => {
-        s.span = b.dataset.v as Span;
         update();
     }));
     document.querySelectorAll<HTMLButtonElement>('#regime button').forEach(b => b.addEventListener('click', () => {

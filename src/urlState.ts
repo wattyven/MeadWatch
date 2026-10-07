@@ -6,7 +6,6 @@
 import type {ScenarioId} from './data';
 import type {Regime} from './impacts';
 import {BASEMAPS, type Basemap} from './basemap';
-import type {Span} from './timeline';
 
 export interface Camera {
     center: [number, number];
@@ -25,7 +24,9 @@ export interface UrlState {
     region?: string;
     embed?: boolean;
     about?: boolean;
-    span?: Span;
+    /** visible time window, YYYY-MM-DD */
+    from?: string;
+    to?: string;
 }
 
 const SCENARIOS: ScenarioId[] = ['most', 'most7', 'min', 'max'];
@@ -50,7 +51,11 @@ export function readUrl(hash = location.hash): UrlState {
     const region = p.get('region');
     if (region && /^[a-z]+$/.test(region)) out.region = region;
     if (p.get('embed') === '1') out.embed = true;
-    if (p.get('span') === 'recent') out.span = 'recent';
+    const from = p.get('from'), to = p.get('to');
+    if (from && to && /^\d{4}-\d{2}-\d{2}$/.test(from) && /^\d{4}-\d{2}-\d{2}$/.test(to)) {
+        out.from = from;
+        out.to = to;
+    }
     if (p.has('about')) out.about = true;
     return out;
 }
@@ -62,7 +67,10 @@ export function toHash(s: UrlState): string {
     if (s.rules) p.set('rules', s.rules);
     if (s.fc) p.set('fc', s.fc);
     if (s.map) p.set('map', s.map);
-    if (s.span === 'recent') p.set('span', 'recent');
+    if (s.from && s.to) {
+        p.set('from', s.from);
+        p.set('to', s.to);
+    }
     if (s.region) p.set('region', s.region);
     if (s.cam) {
         const c = s.cam;

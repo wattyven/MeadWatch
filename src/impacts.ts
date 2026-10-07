@@ -73,9 +73,9 @@ export function shortageFor(regime: Regime, jan1Elevation: number, opts: Shortag
             nv: 50_000,
             mx: null,
             consult: low < 1010
-                ? 'Projected below 1,010 ft within 12 months: Interior must consult the Basin States and Tribes on further actions.'
+                ? 'the forecast shows the lake below 1,010 ft within 12 months, so the Interior Department must convene the states and tribes on further action.'
                 : jan1Elevation >= 1125
-                    ? 'Projected at or above 1,125 ft: consultation on increasing apportionments.'
+                    ? 'the forecast shows the lake at or above 1,125 ft, so states may be offered more water.'
                     : null
         };
     }
@@ -91,9 +91,9 @@ export function shortageFor(regime: Regime, jan1Elevation: number, opts: Shortag
         nv: row.nv,
         mx: row.mx,
         consult: jan1Elevation < 1025
-            ? 'Below 1,025 ft: Interior consults on additional measures to keep Mead above 1,000 ft.'
+            ? 'below 1,025 ft, the Interior Department consults on further measures to keep the lake above 1,000 ft.'
             : jan1Elevation < 1030
-                ? 'Below 1,030 ft: DCP requires consultation on further protective actions.'
+                ? 'below 1,030 ft, the Drought Contingency Plan requires talks on further protective steps.'
                 : null
     };
 }
@@ -252,7 +252,7 @@ const CA_SPLIT: Record<string, number> = {socal: 0.6, iid: 0.3, cvwd: 0.07, pvid
 
 function physicalRisk(h: number): {sev: number; note: string | null} {
     if (h <= DEAD_POOL) return {sev: 1, note: 'Dead pool: no water can be released past Hoover Dam'};
-    if (h < MIN_POWER_POOL) return {sev: 0.6, note: 'Releases limited to the outlet works; downstream deliveries severely constrained'};
+    if (h < MIN_POWER_POOL) return {sev: 0.6, note: 'Below 950 ft Hoover can release water only through small outlets, so deliveries downstream are severely limited'};
     return {sev: 0, note: null};
 }
 
@@ -383,7 +383,7 @@ export function downstreamFlows(h: number, s: Shortage, observedHooverMaf: numbe
     if (observed) r1 = observedHooverMaf!;
 
     const note = dead ? 'Dead pool: no water passes Hoover Dam'
-        : limited ? 'Below 950 ft: releases limited to the outlet works; scheduled flow may not be deliverable' : null;
+        : limited ? 'Below 950 ft Hoover can release water only through small outlets, so these flows may not be deliverable' : null;
     const mk = (id: Flow['id'], name: string, short: string, maf: number, normal: number, obs = false): Flow => {
         const v = dead ? 0 : maf;
         return {id, name, short, maf: v, normal, ratio: normal ? v / normal : 0, dry: dead || v < 0.01, note, observed: obs};

@@ -1,0 +1,6 @@
+numpy
+scipy
+pillow
+pyproj
+scikit-image
+pdfplumber

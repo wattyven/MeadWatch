@@ -11,7 +11,7 @@ On September 27, 2026, Lake Mead fell to **1,037.79 ft**, its lowest level since
 ## Features
 
 - **The real lake floor in 3D.** Inside the reservoir, the terrain is the USGS/Reclamation lake-floor survey, so falling water exposes the actual drowned canyons. Dry lakebed shows as a white "bathtub ring", banded every 10 ft. Shorelines are marked at Tier 1, both Las Vegas intakes, minimum power pool and dead pool.
-- **Any water level.** Scrub the timeline from 2000 to 2028, play it, or set a hypothetical level from 870 to 1,229 ft. The water surface, shoreline and every figure update together.
+- **Any water level.** Scrub the timeline from 2000 to 2028, play it, or set a hypothetical level from 870 to 1,229 ft. Zoom into any period by dragging on the strip under the chart or typing a From and To month, and reset with one click. The water surface, shoreline and every figure update together.
 - **Key numbers at a glance:**
   - elevation, storage and surface area
   - Hoover Dam generating capacity
@@ -25,6 +25,7 @@ On September 27, 2026, Lake Mead fell to **1,037.79 ft**, its lowest level since
   - two most-probable runs (6.0 and 7.0 MAF released from Lake Powell)
   - probable maximum
 - **Two rule sets.** Years through 2026 use the 2007 Interim Guidelines and Drought Contingency Plan, with the tier Reclamation actually declared. 2027–28 uses the new Operating Guidelines, and what-if mode can compare the two.
+- **Plain language.** Every technical term is underlined and explains itself on hover or tap. A built-in guide covers how to use the map, and a searchable glossary of more than 40 terms runs from acre-feet to senior water rights.
 - **Share and embed.** Every view has its own link. An embed code puts a compact version on any page, and the methods page lists every source.
 
 | Hoover Dam & Boulder Basin | Dry forecast, mid-2028 | Who's downstream |
@@ -61,10 +62,19 @@ On September 27, 2026, Lake Mead fell to **1,037.79 ft**, its lowest level since
 
 ```bash
 npm install
-npm run dev
+npm run dev      # local server at http://localhost:5173
+npm run build    # production build in dist/
+npm test         # browser smoke test against a running server (needs: npx playwright install chromium)
 ```
 
-Built with MapLibre GL JS, d3 and Vite.
+| Folder | Contents |
+|---|---|
+| `src/` | The app (TypeScript): map, water layer, timeline, impact model, glossary |
+| `public/data/` | Prepared data the app loads |
+| `scripts/` | Data pipeline: `npm run data:levels` (daily USBR readings), `data:forecast`, `data:bathymetry`, `data:waterways`, `data:regions`, `og` (preview image). The Python steps need `pip install -r scripts/requirements.txt` |
+| `tests/` | `smoke.mjs`: end-to-end checks in headless Chromium, with screenshots |
+
+The site deploys to GitHub Pages from `main` and refreshes Reclamation's daily readings automatically. Built with MapLibre GL JS, d3 and Vite.
 
 ---
 
