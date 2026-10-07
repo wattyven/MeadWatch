@@ -21,6 +21,9 @@ import {lineString} from '@turf/helpers';
 
 const CACHE = new URL('../.cache/vt/', import.meta.url);
 const Z = 12;
+// z12 tiles generalise short or wiggly pieces away; long gaps are re-checked at full detail.
+const Z_DETAIL = 14;
+const REFINE_GAP_KM = 2;
 
 // Rough guide lines (lon, lat). Only used to steer the routing.
 const ROUTES = [
@@ -28,7 +31,8 @@ const ROUTES = [
         id: 'river', name: 'Colorado River', classes: ['river'], corridor: 1, maxGapKm: 40, guideKm: 6, gapCost: 12,
         guide: [[-114.738, 36.014], [-114.74, 35.85], [-114.67, 35.50], [-114.571, 35.197], [-114.58, 34.99],
             [-114.60, 34.84], [-114.49, 34.72], [-114.36, 34.50], [-114.14, 34.296], [-114.29, 34.15],
-            [-114.52, 33.95], [-114.53, 33.61], [-114.50, 33.30], [-114.62, 33.03], [-114.465, 32.883],
+            [-114.52, 33.95], [-114.53, 33.61], [-114.56, 33.50], [-114.62, 33.42], [-114.69, 33.33],
+            [-114.675, 33.20], [-114.69, 33.08], [-114.50, 32.97], [-114.465, 32.883],
             [-114.62, 32.73], [-114.72, 32.715], [-114.80, 32.50]]
     },
     {
@@ -103,11 +107,18 @@ async function tileTemplate() {
     return tj.tiles[0];
 }
 
-async function getTile(tpl, x, y) {
-    await mkdir(CACHE, {recursive: true});
-    const f = new URL(`${Z}-${x}-${y}.pbf`, CACHE);
+/** Cache folder per OpenFreeMap planet build, so a newer build is fetched fresh. */
+function cacheDir(tpl) {
+    const build = tpl.match(/planet\/([^/]+)\//)?.[1] ?? 'current';
+    return new URL(`${build}/`, CACHE);
+}
+
+async function getTile(tpl, x, y, z = Z) {
+    const dir = cacheDir(tpl);
+    await mkdir(dir, {recursive: true});
+    const f = new URL(`${z}-${x}-${y}.pbf`, dir);
     if (existsSync(f)) return new Uint8Array(await readFile(f));
-    const url = tpl.replace('{z}', Z).replace('{x}', x).replace('{y}', y);
+    const url = tpl.replace('{z}', z).replace('{x}', x).replace('{y}', y);
     for (let attempt = 0; attempt < 3; attempt++) {
         const res = await fetch(url);
         if (res.ok) {
@@ -117,7 +128,7 @@ async function getTile(tpl, x, y) {
         }
         await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
     }
-    throw new Error(`tile ${x}/${y} failed`);
+    throw new Error(`tile ${z}/${x}/${y} failed`);
 }
 
 function corridorTiles(guide, width) {
@@ -133,19 +144,19 @@ function corridorTiles(guide, width) {
     return [...set].map(k => k.split('/').map(Number));
 }
 
-async function collectLines(tpl, tiles, classes) {
+async function collectLines(tpl, tiles, classes, z = Z) {
     const lines = [];
     let done = 0;
     const queue = [...tiles];
     async function worker() {
         while (queue.length) {
             const [x, y] = queue.pop();
-            const vt = new VectorTile(new Pbf(await getTile(tpl, x, y)));
+            const vt = new VectorTile(new Pbf(await getTile(tpl, x, y, z)));
             const layer = vt.layers.waterway;
             for (let i = 0; layer && i < layer.length; i++) {
                 const f = layer.feature(i);
                 if (!classes.includes(f.properties.class)) continue;
-                const gj = f.toGeoJSON(x, y, Z);
+                const gj = f.toGeoJSON(x, y, z);
                 const parts = gj.geometry.type === 'LineString' ? [gj.geometry.coordinates] : gj.geometry.coordinates;
                 for (const p of parts) lines.push({coords: p, name: f.properties.name ?? '', tunnel: f.properties.brunnel === 'tunnel'});
             }
@@ -328,6 +339,21 @@ for (const r of ROUTES) {
     let pieces, snap;
     try {
         ({pieces, snap} = route(lines, r.guide, r, preferName));
+        // Re-check long bridged gaps against full-detail tiles; keep them only if OSM has no line there.
+        const long = pieces.filter(pc => pc.gap && pc.coords.slice(1).reduce((a, p, i) => a + km(pc.coords[i], p), 0) > REFINE_GAP_KM);
+        if (long.length) {
+            const extra = new Set();
+            for (const pc of long) {
+                const lons = pc.coords.map(c => c[0]), lats = pc.coords.map(c => c[1]);
+                const pad = 0.02;
+                const [ax, ay] = tileOf(Math.min(...lons) - pad, Math.max(...lats) + pad, Z_DETAIL);
+                const [bx, by] = tileOf(Math.max(...lons) + pad, Math.min(...lats) - pad, Z_DETAIL);
+                for (let x = ax; x <= bx; x++) for (let y = ay; y <= by; y++) extra.add(`${x}/${y}`);
+            }
+            const detail = await collectLines(tpl, [...extra].map(k => k.split('/').map(Number)), r.classes, Z_DETAIL);
+            console.log(`  ${r.id}: re-checking ${long.length} gap(s) > ${REFINE_GAP_KM} km with ${extra.size} z${Z_DETAIL} tiles`);
+            ({pieces, snap} = route([...lines, ...detail], r.guide, r, preferName));
+        }
     } catch (e) {
         console.log(`  ${r.id}: ${e.message} (${lines.length} line pieces collected)`);
         continue;

@@ -186,6 +186,13 @@ const fresh = async (hash, viewport = {width: 1400, height: 900}) => {
         return [...new Set(m.queryRenderedFeatures({layers: ['ww-line', 'ww-schematic']}).map(f => f.properties.id))].sort().join(',');
     });
     check('OSM-traced river reaches and all four aqueducts render', ww === 'aac,cap,coachella,cra,r1,r2,r3', ww);
+    const cibola = await p.evaluate(async () => {
+        const d = await (await fetch(new URL('data/waterways.geojson', location.href))).json();
+        let n = 0;
+        for (const f of d.features) if (f.properties.kind === 'river' && !f.properties.gap) for (const [, la] of f.geometry.coordinates) if (la > 33.33 && la < 33.43) n++;
+        return n;
+    });
+    check('river is drawn continuously through the Cibola reach', cibola > 10, `${cibola} vertices between 33.33°N and 33.43°N`);
     check('OpenFreeMap vector basemap + terrain relief loaded', vector);
     const tiles = await p.evaluate(() => performance.getEntriesByType('resource').map(r => r.name).filter(n => /opentopomap|tile\.openstreetmap\.org/.test(n)).length);
     check('no requests to volunteer OSM/OpenTopoMap tile servers', tiles === 0, `${tiles} requests`);

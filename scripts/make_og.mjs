@@ -16,7 +16,13 @@ await page.waitForFunction(() => {
     return m && m.loaded() && m.areTilesLoaded() && !m.isMoving();
 }, null, {timeout: 90000, polling: 500}).catch(() => {});
 await page.waitForTimeout(1500);
-const level = await page.evaluate(() => window.mead.app.lastObserved.elevation.toLocaleString('en-US', {minimumFractionDigits: 1, maximumFractionDigits: 1}));
+const {level, isRecord} = await page.evaluate(() => {
+    const {lastObserved, daily} = window.mead.app;
+    return {
+        level: lastObserved.elevation.toLocaleString('en-US', {minimumFractionDigits: 1, maximumFractionDigits: 1}),
+        isRecord: lastObserved.elevation <= daily.recordLow.elevation + 0.005
+    };
+});
 await page.addStyleTag({content: `
     .timeline, .embed-bar, .maplibregl-control-container { display: none !important; }
     .og { position: fixed; left: 36px; bottom: 34px; z-index: 50; color: #fff; font-family: Inter, system-ui, sans-serif;
@@ -26,12 +32,12 @@ await page.addStyleTag({content: `
     .og p { margin: 6px 0 0; font-size: 21px; color: #c9d3df; }
     .og b { color: #ffb4ab; }
 `});
-await page.evaluate(lvl => {
+await page.evaluate(([lvl, rec]) => {
     const d = document.createElement('div');
     d.className = 'og';
-    d.innerHTML = `<h1><span>Mead</span>Watch</h1><p>Lake Mead at <b>${lvl} ft</b>, near its all-time low. See who downstream runs short.</p>`;
+    d.innerHTML = `<h1><span>Mead</span>Watch</h1><p>Lake Mead at <b>${lvl} ft</b>, ${rec ? 'a record low' : 'near its all-time low'}. See who downstream runs short.</p>`;
     document.body.appendChild(d);
-}, level);
+}, [level, isRecord]);
 await page.screenshot({path: fileURLToPath(new URL('../public/og.jpg', import.meta.url)), type: 'jpeg', quality: 86});
 await browser.close();
 console.log('wrote public/og.jpg');

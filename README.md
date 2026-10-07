@@ -6,7 +6,7 @@
 
 ![MeadWatch: Lake Mead at 1,037.8 ft, October 2026](docs/overview.png)
 
-On September 27, 2026, Lake Mead fell to **1,037.79 ft**, its lowest level since it first filled in the 1930s. MeadWatch shows what that means. You can drain the reservoir on its real lake floor, follow its decline since 2000 into Reclamation's forecasts, and see how each foot changes water and power for the ~28 million people and ~1.3 million irrigated acres in Arizona, California, Nevada and Mexico that depend on it.
+In fall 2026 Lake Mead fell below every level on record, reaching **1,037.76 ft** on October 6, 2026, its lowest since it first filled in the 1930s. (The live reading, refreshed daily, is on [mead.watch](https://mead.watch/).) MeadWatch shows what that means. You can drain the reservoir on its real lake floor, follow its decline since 2000 into Reclamation's forecasts, and see how each foot changes water and power for the ~28 million people and ~1.3 million irrigated acres in Arizona, California, Nevada and Mexico that depend on it.
 
 ## Features
 
@@ -71,7 +71,7 @@ npm test         # browser smoke test against a running server (needs: npx playw
 |---|---|
 | `src/` | The app (TypeScript): map, water layer, timeline, impact model, glossary |
 | `public/data/` | Prepared data the app loads |
-| `scripts/` | Data pipeline: `npm run data:levels` (daily USBR readings), `data:forecast`, `data:bathymetry`, `data:waterways`, `data:regions`, `og` (preview image). The Python steps need `pip install -r scripts/requirements.txt` |
+| `scripts/` | Data pipeline: `npm run data:levels` (daily USBR readings), `data:forecast`, `data:bathymetry`, `data:waterways`, `data:regions`, `og` (preview image), `screenshots` (these README images). The Python steps need `pip install -r scripts/requirements.txt` |
 | `tests/` | `smoke.mjs`: end-to-end checks in headless Chromium, with screenshots |
 
 The site deploys to GitHub Pages from `main` and refreshes Reclamation's daily readings automatically. Built with MapLibre GL JS, d3 and Vite.

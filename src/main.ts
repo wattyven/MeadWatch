@@ -354,12 +354,12 @@ function renderAlert(app: AppData) {
 function renderLegend() {
     const sev = SEVERITY_STOPS.map(([v, c]) => `<span class="sev-chip" style="--c:${c}">${severityLabel(v)}</span>`).join('');
     $('#legend').innerHTML = `
-        <div class="lg-row"><span class="lg-swatch water"></span>Water (shade = depth)</div>
-        <div class="lg-row"><span class="lg-swatch bed"></span>${term('bathtub-ring', 'Exposed lakebed')} (bands every 10 ft)</div>
-        <div class="lg-row"><span class="lg-swatch shore"></span>Shoreline when ${term('full-pool', 'full')} (1,229 ft)</div>
-        <div class="lg-row"><span class="lg-swatch th"></span>Shoreline at ${term('shortage-tier', 'Tier 1')} · ${term('snwa-intakes', 'intakes')} · ${term('min-power-pool', 'power')} · ${term('dead-pool', 'dead pool')}</div>
-        <div class="lg-row"><span class="lg-swatch river"></span>Colorado River &amp; canals (OpenStreetMap)</div>
-        <div class="lg-row"><span class="lg-swatch aq"></span>Buried aqueduct (approximate route)</div>
+        <div class="lg-row"><span class="lg-swatch water"></span><span>Water (shade = depth)</span></div>
+        <div class="lg-row"><span class="lg-swatch bed"></span><span>${term('bathtub-ring', 'Exposed lakebed')} (bands every 10 ft)</span></div>
+        <div class="lg-row"><span class="lg-swatch shore"></span><span>Shoreline when ${term('full-pool', 'full')} (1,229 ft)</span></div>
+        <div class="lg-row"><span class="lg-swatch th"></span><span>Shoreline at ${term('shortage-tier', 'Tier 1')} · ${term('snwa-intakes', 'intakes')} · ${term('min-power-pool', 'power')} · ${term('dead-pool', 'dead pool')}</span></div>
+        <div class="lg-row"><span class="lg-swatch river"></span><span>Colorado River &amp; canals (OpenStreetMap)</span></div>
+        <div class="lg-row"><span class="lg-swatch aq"></span><span>Buried aqueduct (approximate route)</span></div>
         <div class="lg-sev">${sev}</div>
         <div class="lg-note">Region colour = how much of its Colorado River water is cut, or at risk</div>`;
 }
