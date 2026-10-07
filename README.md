@@ -28,7 +28,7 @@ On **September 27, 2026, Lake Mead hit 1,037.79 ft**, its lowest level since it 
   - Colorado River Indian Tribes (CRIT)
   - Yuma
   - Mexico
-- **Timeline.** Daily observed levels from 2021 run into Reclamation's 24-Month Study forecasts through 2028. You can drag the playhead, press play, or switch between the most probable, probable-minimum and probable-maximum scenarios.
+- **Timeline.** Daily observed levels since 2000 run into Reclamation's 24-Month Study forecasts through 2028, with a "Since 2021" zoom. You can drag the playhead, press play, or switch between the probable-minimum, two most-probable (6.0 and 7.0 MAF Powell release) and probable-maximum runs, all from the September 2026 study set.
 - **What-if mode.** Set any level from 870 to 1,229 ft with the slider or by typing a number, and choose which operating rules apply: the 2027–28 Operating Guidelines or the 2007 Guidelines plus the 2019 DCP.
 - **River and canal flows.** The Colorado River below Hoover Dam and the CAP, Colorado River Aqueduct, All-American and Coachella canals are traced on OpenStreetMap's own geometry. Each line's width follows its modelled flow, and a panel compares each reach and canal with normal deliveries. The Hoover release uses real USBR data (a trailing year, then the 24-Month Study). Lake Mohave and Lake Havasu levels come from USBR too. At dead pool every reach runs dry.
 - **Shareable links and embeds.** The URL keeps the level or date, forecast, rules, basemap, region and camera. The Share button copies a link or an `<iframe>` embed. `#embed=1` gives a compact view for news sites, and `#about` opens the methods and sources page.
@@ -56,7 +56,7 @@ The app needs network access for map tiles, terrain and fonts. Everything else i
 
 ### Tests
 
-`tests/smoke.mjs` drives the real app in headless Chromium with Playwright. It runs 41 checks and saves screenshots:
+`tests/smoke.mjs` drives the real app in headless Chromium with Playwright. It runs 45 checks and saves screenshots:
 - terrain decoding, including a run with simulated anti-fingerprinting canvas noise
 - the what-if input and slider
 - the operating-rule tiers, including the declared 2023 Tier 2a
@@ -119,7 +119,7 @@ On the timeline, each year's rules follow the actual regime:
 - **Shapes are approximate.** Irrigation districts are hand-traced and accurate to a few km. The Colorado River Aqueduct route is approximate (see Waterways). City service areas use real county boundaries. Population and acreage figures are rounded public numbers.
 - **Flows are a schedule model.** Canal and reach flows are scheduled deliveries after cuts, labelled *est.* in the app. Real operations also include voluntary conservation, which is why the observed Hoover release (7.4 MAF over the past year) is below the scheduled figure. Below 950 ft, Reclamation says releases would be "severely constrained" but publishes no capacity, so the app only flags it.
 - **The social-preview image isn't refreshed by CI.** It needs a browser to render. Re-run `npm run og` now and then.
-- **Forecast vintages differ.** The full September 2026 Most Probable table wasn't posted, so the "Most probable" line uses the July 2026 run. The September Most Probable value for December 31, 2026 (1,034.18 ft) is plotted as a diamond.
+- **Most-probable lines are read from a chart.** Reclamation published September 2026's two Most Probable runs only as a chart, so `scripts/extract_24ms.py` digitises them. The scale is fitted to the minimum and maximum lines on the same chart, whose tables are published; the fit is within 0.3 ft, and Dec 31, 2026 reads 1,034.21 ft against the published 1,034.18 ft.
 - **Lake-floor coverage ends at 114°W.** The lake-floor grid stops there, so the narrow Lower Granite Gorge reach above Pearce Ferry isn't modelled.
 
 ## Credits

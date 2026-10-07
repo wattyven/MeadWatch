@@ -100,9 +100,11 @@
 
         <h3>Data</h3>
         <ul>
-            <li><b>Lake levels &amp; storage</b>: USBR hydrodata, Lake Mead (site 921), daily. Latest reading <span data-fill="latest"></span>; snapshot taken <span data-fill="fetched"></span>, refreshed automatically each day.
+            <li><b>Lake levels &amp; storage</b>: USBR hydrodata, Lake Mead (site 921), daily since 2000, plus Lakes Mohave and Havasu. Latest reading <span data-fill="latest"></span>; snapshot taken <span data-fill="fetched"></span>, refreshed automatically each day.
                 <a href="https://www.usbr.gov/uc/water/hydrodata/reservoir_data/site_map.html" target="_blank" rel="noopener">source</a></li>
-            <li><b>Forecasts</b>: Reclamation 24-Month Study, end-of-month Lake Mead elevations: <span data-fill="scenarios"></span>.
+            <li><b>Forecasts</b>: Reclamation 24-Month Study, end-of-month Lake Mead elevations, all from the September 2026 set: <span data-fill="scenarios"></span>.
+                September’s two Most Probable runs (6.0 and 7.0 maf released from Lake Powell in water year 2027) were published only as a chart, so they are read from it;
+                the reading reproduces the published minimum and maximum tables to within 0.3 ft.
                 <a href="https://www.usbr.gov/lc/region/g4000/24mo/index.html" target="_blank" rel="noopener">source</a></li>
             <li><b>Lake floor</b>: USGS/USBR Open-File Report 03-320, 30 m surface of the floor of Lake Mead (2001 swath bathymetry + pre-impoundment contours + NED).
                 <a href="https://pubs.usgs.gov/of/2003/of03-320/" target="_blank" rel="noopener">source</a></li>
@@ -122,7 +124,7 @@
 
         <h3>How impacts are estimated</h3>
         <ul>
-            <li><b>Scheduled cuts by state</b> follow the published rules. For 2021–2026 the app uses the tier Reclamation actually declared each year.</li>
+            <li><b>Scheduled cuts by state</b> follow the published rules. For 2008–2026 the app uses the condition Reclamation actually declared each year (Normal through 2019, Tier 0 in 2020–21, then Tier 1, 2a, 1, 1, 1); before 2008 there was no shortage schedule.</li>
             <li><b>Splits within a state</b> <span class="est">est.</span>: Arizona’s first 512,000 AF of cuts fall on CAP agriculture and excess water, the rest on CAP cities and tribes;
                 California’s cut is split 60/30/7/3 among MWD, IID, CVWD and PVID. Mexico’s 2027–28 terms (Minute 334) are not modeled.</li>
             <li><b>Hoover capacity</b> <span class="est">est.</span>: 2,080 MW × (head ÷ 583 ft)<sup>1.15</sup>, calibrated to 24-Month Study effective-capacity figures; zero below 950 ft.</li>
@@ -145,7 +147,8 @@
         </div>
         <label class="field" id="scenario-field">Forecast
             <select id="scenario">
-                <option value="most">Most probable</option>
+                <option value="most">Most probable · 6.0 maf Powell release</option>
+                <option value="most7">Most probable · 7.0 maf Powell release</option>
                 <option value="min">Probable minimum (dry)</option>
                 <option value="max">Probable maximum (wet)</option>
             </select>
@@ -158,6 +161,10 @@
         <div class="seg small" id="regime" role="radiogroup" aria-label="Operating rules" hidden>
             <button data-v="2027" class="on" role="radio" aria-checked="true">2027–28 rules</button>
             <button data-v="2007" role="radio" aria-checked="false">2007 rules + DCP</button>
+        </div>
+        <div class="seg small" id="span" role="radiogroup" aria-label="Timeline range">
+            <button data-v="all" class="on" role="radio" aria-checked="true">Since 2000</button>
+            <button data-v="recent" role="radio" aria-checked="false">Since 2021</button>
         </div>
         <button id="today" class="btn-link">Jump to today</button>
     </div>

@@ -22,13 +22,17 @@ export interface ForecastPoint {
 export interface Scenario {
     id: ScenarioId;
     label: string;
+    /** e.g. "6.0 maf Powell release" */
+    detail?: string;
     study: string;
+    /** read from Reclamation's published chart rather than a table */
+    digitized?: boolean;
     url: string;
     note: string;
     series: ForecastPoint[];
 }
 
-export type ScenarioId = 'most' | 'min' | 'max';
+export type ScenarioId = 'most' | 'most7' | 'min' | 'max';
 
 export interface ForecastData {
     source: string;
@@ -167,6 +171,8 @@ export function hooverReleaseMaf(app: AppData, t: number, scenario: ScenarioId):
     }
     if (t > lastObs) {
         const sc = app.forecast.scenarios.find(x => x.id === scenario)!;
+        // runs read from Reclamation's chart have elevations only, no monthly releases
+        if (!sc.series.some(p => p.releaseKaf !== undefined)) return null;
         for (const p of sc.series) {
             if (p.releaseKaf === undefined) continue;
             const end = toT(p.date), days = new Date(end).getUTCDate();

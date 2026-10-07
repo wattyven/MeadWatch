@@ -6,6 +6,7 @@
 import type {ScenarioId} from './data';
 import type {Regime} from './impacts';
 import {BASEMAPS, type Basemap} from './basemap';
+import type {Span} from './timeline';
 
 export interface Camera {
     center: [number, number];
@@ -24,9 +25,10 @@ export interface UrlState {
     region?: string;
     embed?: boolean;
     about?: boolean;
+    span?: Span;
 }
 
-const SCENARIOS: ScenarioId[] = ['most', 'min', 'max'];
+const SCENARIOS: ScenarioId[] = ['most', 'most7', 'min', 'max'];
 
 export function readUrl(hash = location.hash): UrlState {
     const p = new URLSearchParams(hash.replace(/^#/, ''));
@@ -48,6 +50,7 @@ export function readUrl(hash = location.hash): UrlState {
     const region = p.get('region');
     if (region && /^[a-z]+$/.test(region)) out.region = region;
     if (p.get('embed') === '1') out.embed = true;
+    if (p.get('span') === 'recent') out.span = 'recent';
     if (p.has('about')) out.about = true;
     return out;
 }
@@ -59,6 +62,7 @@ export function toHash(s: UrlState): string {
     if (s.rules) p.set('rules', s.rules);
     if (s.fc) p.set('fc', s.fc);
     if (s.map) p.set('map', s.map);
+    if (s.span === 'recent') p.set('span', 'recent');
     if (s.region) p.set('region', s.region);
     if (s.cam) {
         const c = s.cam;

@@ -90,6 +90,10 @@ await page.$eval('#elev-slider', el => { el.value = '1100'; el.dispatchEvent(new
 await page.waitForTimeout(300);
 check('slider sets the water level', (await page.textContent('.m-big')).trim() === '1,100', await page.textContent('.m-big'));
 
+// Timeline scrubbing below uses the 2021–2028 view.
+await page.click('#span button[data-v="recent"]');
+await page.waitForTimeout(300);
+
 // Timeline scrub into the forecast (dry scenario).
 await page.selectOption('#scenario', 'min');
 const box = await page.locator('.tl-hit').boundingBox();
@@ -235,6 +239,36 @@ const fresh = async (hash, viewport = {width: 1400, height: 900}) => {
     const r = await p.evaluate(() => ({open: document.querySelector('#about-dialog').open, latest: document.querySelector('[data-fill="latest"]').textContent}));
     check('#about opens the methods & sources dialog', r.open && /ft on/.test(r.latest), JSON.stringify(r));
     await p.screenshot({path: `${out}/14-about.png`});
+    await p.close();
+}
+
+// ---- Long history and consistent forecasts
+{
+    const p = await fresh('');
+    const order = await p.evaluate(() => {
+        const S = Object.fromEntries(window.mead.app.forecast.scenarios.map(s => [s.id, new Map(s.series.map(q => [q.date, q.elevationFt]))]));
+        const bad = [];
+        for (const [d, m6] of S.most) {
+            const m7 = S.most7.get(d), lo = S.min.get(d), hi = S.max.get(d);
+            if (lo !== undefined && m6 < lo - 0.5) bad.push(`${d} most<min`);
+            if (hi !== undefined && m7 > hi + 0.5) bad.push(`${d} most7>max`);
+            if (m7 !== undefined && m6 > m7 + 0.5) bad.push(`${d} most>most7`);
+        }
+        return {n: S.most.size, bad, studies: window.mead.app.forecast.scenarios.map(s => s.id + ':' + s.study).join(',')};
+    });
+    check('forecast runs are consistent: min ≤ most probable (6.0) ≤ (7.0) ≤ max', order.n > 20 && order.bad.length === 0, `${order.n} months; ${order.bad.slice(0, 3).join(' ') || 'no violations'}; ${order.studies}`);
+    const box2 = await p.locator('.tl-hit').boundingBox();
+    await p.mouse.click(box2.x + box2.width * 0.01, box2.y + box2.height / 2);
+    await p.waitForTimeout(400);
+    const early = await p.evaluate(() => ({date: document.querySelector('.m-date').textContent, elev: parseFloat(document.querySelector('.m-big').textContent.replace(/,/g, '')), rules: document.querySelector('.op-rules').textContent}));
+    check('timeline reaches back to 2000 (lake near 1,200 ft)', /2000/.test(early.date) && early.elev > 1190, `${early.date} → ${early.elev} ft`);
+    check('pre-2008 years show pre-2007 operations', /Pre-2007/.test(early.rules), early.rules);
+    await p.close();
+}
+{
+    const p = await fresh('#date=2027-08-31&fc=most7&span=recent');
+    const r = await p.evaluate(() => ({sel: document.querySelector('#scenario').value, kicker: document.querySelector('.m-kicker').textContent, span: document.querySelector('#span .on').dataset.v}));
+    check('shared link restores the 7.0 maf scenario and the 2021 range', r.sel === 'most7' && /7\.0/.test(r.kicker) && r.span === 'recent', JSON.stringify(r));
     await p.close();
 }
 

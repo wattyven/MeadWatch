@@ -11,7 +11,7 @@ import {
 } from './impacts';
 import {loadRaster, registerTerrainProtocol} from './terrain';
 import {type Basemap, type MapHandles, type ViewId, createMap} from './map';
-import {TIMELINE_START, Timeline} from './timeline';
+import {type Span, Timeline} from './timeline';
 import {type Camera, type UrlState, absoluteUrl, readUrl, writeUrl} from './urlState';
 
 interface State {
@@ -23,6 +23,7 @@ interface State {
     selected: string | null;
     basemap: Basemap;
     embed: boolean;
+    span: Span;
 }
 
 /** Regions whose share of a state cut is our approximation, not a published allocation */
@@ -49,7 +50,8 @@ async function main() {
         manualRegime: '2027',
         selected: null,
         basemap: 'topo',
-        embed: false
+        embed: false,
+        span: 'all'
     };
     applyUrl(app, state, url);
     if (state.embed) document.body.classList.add('embed');
@@ -73,6 +75,7 @@ async function main() {
         fc: state.scenario !== 'most' ? state.scenario : undefined,
         map: state.basemap !== 'topo' ? state.basemap : undefined,
         region: state.selected ?? undefined,
+        span: state.span,
         cam: url.cam || !sameCam(mapH.getCamera(), initialCam) ? mapH.getCamera() : undefined,
         embed: state.embed || undefined
     });
@@ -122,14 +125,15 @@ async function main() {
     playBtn.addEventListener('click', () => {
         if (raf) return stopPlay();
         state.mode = 'timeline';
-        if (state.t >= timeline.end - 86400000) state.t = TIMELINE_START;
+        if (state.t >= timeline.end - 86400000 || state.t < timeline.start) state.t = timeline.start;
+        const msPerMs = (timeline.end - timeline.start) / 22000; // the whole range plays in ~22 s
         playBtn.classList.add('is-playing');
         playBtn.setAttribute('aria-label', 'Pause timeline');
         let last = performance.now();
         const step = (now: number) => {
             const dt = Math.min(64, now - last);
             last = now;
-            state.t += dt * 0.18 * 86400000; // ~11 days per second of playback per 60fps frame budget
+            state.t += dt * msPerMs;
             if (state.t >= timeline.end) {
                 state.t = timeline.end;
                 update();
@@ -152,7 +156,7 @@ async function main() {
         mapH.setLevel(d.elevation);
         mapH.updateImpacts(d.impacts);
         mapH.updateFlows(d.flows);
-        timeline.set(state.t, state.scenario, state.mode === 'manual', d.elevation);
+        timeline.set(state.t, state.scenario, state.mode === 'manual', d.elevation, state.span);
         renderMetrics(app, state, d);
         renderImpacts(app, state, d, select);
         if (state.embed) renderEmbedBar(d, absoluteUrl({...urlState(), embed: undefined}));
@@ -168,6 +172,7 @@ function applyUrl(app: AppData, s: State, u: UrlState) {
     if (u.fc) s.scenario = u.fc;
     if (u.rules) s.manualRegime = u.rules;
     if (u.map) s.basemap = u.map;
+    s.span = u.span ?? 'all';
     s.embed = !!u.embed;
     s.selected = u.region && REGIONS.some(r => r.id === u.region) ? u.region : null;
     if (u.level !== undefined) {
@@ -175,7 +180,8 @@ function applyUrl(app: AppData, s: State, u: UrlState) {
         s.manualElev = Math.max(870, Math.min(FULL_POOL, u.level));
     } else {
         s.mode = 'timeline';
-        s.t = u.date ? Math.max(TIMELINE_START, Math.min(toT(u.date), lastForecastT(app))) : app.lastObserved.t;
+        s.t = u.date ? Math.max(app.observed.t[0], Math.min(toT(u.date), lastForecastT(app))) : app.lastObserved.t;
+        if (s.span === 'recent' && s.t < toT('2021-10-01')) s.span = 'all';
     }
 }
 
@@ -224,7 +230,7 @@ function wireDialogs(app: AppData, link: () => string, embedLink: () => string) 
     const fill = (k: string, v: string) => about.querySelectorAll(`[data-fill="${k}"]`).forEach(e => (e.textContent = v));
     fill('latest', `${n1.format(app.lastObserved.elevation)} ft on ${dateFmt.format(new Date(app.lastObserved.t))}`);
     fill('fetched', dateFmt.format(new Date(app.daily.fetched)));
-    fill('scenarios', app.forecast.scenarios.map(x => `${x.label} (${x.study})`).join(', '));
+    fill('scenarios', app.forecast.scenarios.map(x => `${x.label}${x.detail ? `, ${x.detail}` : ''} (${x.study})`).join('; '));
     $('#about-btn').addEventListener('click', () => about.showModal());
     for (const dlg of [share, about]) {
         dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
@@ -256,7 +262,7 @@ function derive(app: AppData, s: State): Derived {
     }
     const elevation = elevationAt(app, s.t, s.scenario);
     const year = new Date(s.t).getUTCFullYear();
-    const regime: Regime = year >= 2027 ? '2027' : '2007';
+    const regime: Regime = year >= 2027 ? '2027' : year >= 2008 ? '2007' : 'pre2007';
     const jan1 = elevationAt(app, Date.UTC(year - 1, 11, 31, 12), s.scenario);
     let lookaheadMin = Infinity;
     for (let k = 0; k <= 12; k++) lookaheadMin = Math.min(lookaheadMin, elevationAt(app, s.t + k * 30.4 * 86400000, s.scenario));
@@ -266,7 +272,7 @@ function derive(app: AppData, s: State): Derived {
     const fc = isForecast(app, s.t);
     return {
         elevation,
-        source: fc ? `Forecast · ${scen.label}` : 'Observed · USBR',
+        source: fc ? `Forecast · ${scen.label}${scen.detail ? ` (${scen.detail.replace(' Powell release', '')})` : ''}` : 'Observed · USBR',
         dateLabel: dateFmt.format(new Date(s.t)) + (fc ? ` · ${scen.study} 24-Month Study` : ''),
         opYear: year, jan1, declared: !!declared, shortage, impacts: regionImpacts(elevation, shortage),
         flows: downstreamFlows(elevation, shortage, hooverReleaseMaf(app, s.t, s.scenario)),
@@ -342,7 +348,7 @@ function renderMetrics(app: AppData, s: State, d: Derived) {
                 <span>${d.opYear ? `${d.opYear} operating year` : 'Rules applied to this level'}</span>
                 <span class="op-tier">${sh.tier}</span>
             </div>
-            <div class="op-rules">${regimeLabel[sh.regime]}${d.declared ? ` · tier declared by Reclamation for ${d.opYear}`
+            <div class="op-rules">${regimeLabel[sh.regime]}${d.declared ? ` · ${sh.tier === 'Normal' ? 'condition' : 'tier'} declared by Reclamation for ${d.opYear}`
                 : d.opYear && sh.regime === '2007' ? ` · from ${n1.format(d.jan1)} ft on Jan 1` : ''}</div>
             <div class="op-cuts">${cuts.map(([k, v]) => `<div><span>${k}</span><b>${v === null ? '—' : v === 0 ? '0' : '−' + fmtAf(v)}</b></div>`).join('')}</div>
             <div class="op-unit">Scheduled reductions, acre-feet per year${sh.mx === null ? ' · Mexico: IBWC Minute 334, not modeled' : ''}</div>
@@ -469,6 +475,9 @@ function setSeg(id: string, v: string) {
 function syncControls(s: State, elevation: number) {
     setSeg('mode', s.mode);
     setSeg('regime', s.manualRegime);
+    setSeg('span', s.span);
+    const sel = $<HTMLSelectElement>('#scenario');
+    if (sel.value !== s.scenario) sel.value = s.scenario;
     $('#regime').hidden = s.mode !== 'manual';
     $('#scenario-field').classList.toggle('dim', s.mode === 'manual');
     const slider = $<HTMLInputElement>('#elev-slider');
@@ -494,6 +503,10 @@ function wireControls(app: AppData, s: State, m: MapHandles, update: () => void)
         const v = b.dataset.v as State['mode'];
         if (v === 'manual' && s.mode !== 'manual') s.manualElev = Math.round(elevationAt(app, s.t, s.scenario) * 2) / 2;
         s.mode = v;
+        update();
+    }));
+    document.querySelectorAll<HTMLButtonElement>('#span button').forEach(b => b.addEventListener('click', () => {
+        s.span = b.dataset.v as Span;
         update();
     }));
     document.querySelectorAll<HTMLButtonElement>('#regime button').forEach(b => b.addEventListener('click', () => {

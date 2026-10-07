@@ -12,7 +12,8 @@ import {readFile, writeFile} from 'node:fs/promises';
 
 const HYDRO = 'https://www.usbr.gov/uc/water/hydrodata/reservoir_data';
 const BASE = `${HYDRO}/921/csv`;
-const KEEP_FROM = '2019-01-01';
+// The app's timeline starts in 2000; one extra year lets it compute a trailing-year release.
+const KEEP_FROM = '1999-01-01';
 
 async function series(datatype, site = 921) {
     const res = await fetch(`${HYDRO}/${site}/csv/${datatype}.csv`);

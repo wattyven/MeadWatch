@@ -17,7 +17,7 @@
 
 import {DEAD_POOL, MIN_POWER_POOL} from './data';
 
-export type Regime = '2007' | '2027';
+export type Regime = 'pre2007' | '2007' | '2027';
 
 export interface Shortage {
     regime: Regime;
@@ -47,7 +47,8 @@ const T2007: {above: number; tier: string; az: number; nv: number; ca: number; m
  * December 31 -- e.g. 2023 was declared Tier 2a although Mead ended 2022 at 1,044.8 ft.
  */
 export const DECLARED_TIERS: Record<number, string> = {
-    2021: 'Tier 0', 2022: 'Tier 1', 2023: 'Tier 2a', 2024: 'Tier 1', 2025: 'Tier 1', 2026: 'Tier 1'
+    ...Object.fromEntries(Array.from({length: 12}, (_, i) => [2008 + i, 'Normal'])),
+    2020: 'Tier 0', 2021: 'Tier 0', 2022: 'Tier 1', 2023: 'Tier 2a', 2024: 'Tier 1', 2025: 'Tier 1', 2026: 'Tier 1'
 };
 
 export interface ShortageOptions {
@@ -58,6 +59,10 @@ export interface ShortageOptions {
 }
 
 export function shortageFor(regime: Regime, jan1Elevation: number, opts: ShortageOptions = {}): Shortage {
+    if (regime === 'pre2007') {
+        // Before the 2007 Interim Guidelines there was no shortage schedule, and none was ever declared.
+        return {regime, tier: 'Normal', az: 0, ca: 0, nv: 0, mx: 0, consult: null};
+    }
     if (regime === '2027') {
         const low = opts.lookaheadMin ?? jan1Elevation;
         return {
@@ -94,6 +99,7 @@ export function shortageFor(regime: Regime, jan1Elevation: number, opts: Shortag
 }
 
 export const regimeLabel: Record<Regime, string> = {
+    'pre2007': 'Pre-2007 operations (no shortage schedule)',
     '2007': '2007 Interim Guidelines + 2019 DCP',
     '2027': '2027–28 Operating Guidelines'
 };

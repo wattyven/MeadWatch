@@ -338,333 +338,214 @@
   {
    "id": "most",
    "label": "Most Probable",
-   "study": "July 2026",
-   "url": "https://www.usbr.gov/lc/region/g4000/24mo/2026/JUL26.pdf",
-   "note": "Median hydrology. Latest full Most Probable table available; the September 2026 Most Probable run projects 1,034.18 ft on Dec 31, 2026.",
+   "detail": "6.0 maf Powell release",
+   "study": "September 2026",
+   "url": "https://www.usbr.gov/lc/region/g4000/24mo/2026/September-Chart.pdf",
+   "note": "Median hydrology with a 6.0 maf Glen Canyon Dam release in water year 2027. Read from Reclamation's chart (\u00b10.3 ft).",
+   "digitized": true,
    "series": [
     {
-     "date": "2025-07-31",
-     "elevationFt": 1054.14,
-     "storageKaf": 7985.0,
-     "releaseKaf": 721.0,
-     "hooverCapacityMw": 1186.1,
-     "hooverEnergyGwh": 262.6,
-     "unitsAvailablePct": 85.0
-    },
-    {
-     "date": "2025-08-31",
-     "elevationFt": 1055.54,
-     "storageKaf": 8088.0,
-     "releaseKaf": 628.0,
-     "hooverCapacityMw": 1180.9,
-     "hooverEnergyGwh": 227.3,
-     "unitsAvailablePct": 85.0
-    },
-    {
-     "date": "2025-09-30",
-     "elevationFt": 1057.25,
-     "storageKaf": 8216.0,
-     "releaseKaf": 456.0,
-     "hooverCapacityMw": 905.0,
-     "hooverEnergyGwh": 164.7,
-     "unitsAvailablePct": 65.0
-    },
-    {
-     "date": "2025-10-31",
-     "elevationFt": 1057.57,
-     "storageKaf": 8240.0,
-     "releaseKaf": 485.0,
-     "hooverCapacityMw": 738.0,
-     "hooverEnergyGwh": 175.7,
-     "unitsAvailablePct": 53.0
-    },
-    {
-     "date": "2025-11-30",
-     "elevationFt": 1058.91,
-     "storageKaf": 8341.0,
-     "releaseKaf": 415.0,
-     "hooverCapacityMw": 752.5,
-     "hooverEnergyGwh": 151.8,
-     "unitsAvailablePct": 54.0
-    },
-    {
-     "date": "2025-12-31",
-     "elevationFt": 1062.24,
-     "storageKaf": 8594.0,
-     "releaseKaf": 272.0,
-     "hooverCapacityMw": 701.1,
-     "hooverEnergyGwh": 97.0,
-     "unitsAvailablePct": 49.0
-    },
-    {
-     "date": "2026-01-31",
-     "elevationFt": 1065.37,
-     "storageKaf": 8836.0,
-     "releaseKaf": 387.0,
-     "hooverCapacityMw": 854.0,
-     "hooverEnergyGwh": 143.3,
-     "unitsAvailablePct": 58.0
-    },
-    {
-     "date": "2026-02-28",
-     "elevationFt": 1066.14,
-     "storageKaf": 8896.0,
-     "releaseKaf": 486.0,
-     "hooverCapacityMw": 862.0,
-     "hooverEnergyGwh": 182.4,
-     "unitsAvailablePct": 58.0
-    },
-    {
-     "date": "2026-03-31",
-     "elevationFt": 1062.05,
-     "storageKaf": 8579.0,
-     "releaseKaf": 827.0,
-     "hooverCapacityMw": 680.1,
-     "hooverEnergyGwh": 311.8,
-     "unitsAvailablePct": 47.0
-    },
-    {
-     "date": "2026-04-30",
-     "elevationFt": 1056.32,
-     "storageKaf": 8146.0,
-     "releaseKaf": 890.0,
-     "hooverCapacityMw": 750.4,
-     "hooverEnergyGwh": 330.6,
-     "unitsAvailablePct": 53.0
-    },
-    {
-     "date": "2026-05-31",
-     "elevationFt": 1050.0,
-     "storageKaf": 7683.0,
-     "releaseKaf": 890.0,
-     "hooverCapacityMw": 1007.8,
-     "hooverEnergyGwh": 324.2,
-     "unitsAvailablePct": 73.0
-    },
-    {
-     "date": "2026-06-30",
-     "elevationFt": 1044.58,
-     "storageKaf": 7296.0,
-     "releaseKaf": 836.0,
-     "hooverCapacityMw": 1312.1,
-     "hooverEnergyGwh": 298.3,
-     "unitsAvailablePct": 97.0
-    },
-    {
-     "date": "2026-07-31",
-     "elevationFt": 1040.8,
-     "storageKaf": 7033.0,
-     "releaseKaf": 746.0,
-     "hooverCapacityMw": 1287.9,
-     "hooverEnergyGwh": 264.8,
-     "unitsAvailablePct": 97.0
-    },
-    {
-     "date": "2026-08-31",
-     "elevationFt": 1038.94,
-     "storageKaf": 6905.0,
-     "releaseKaf": 648.0,
-     "hooverCapacityMw": 1275.3,
-     "hooverEnergyGwh": 224.7,
-     "unitsAvailablePct": 97.0
-    },
-    {
      "date": "2026-09-30",
-     "elevationFt": 1037.17,
-     "storageKaf": 6784.0,
-     "releaseKaf": 625.0,
-     "hooverCapacityMw": 1097.3,
-     "hooverEnergyGwh": 217.5,
-     "unitsAvailablePct": 85.0
+     "elevationFt": 1038.39
     },
     {
      "date": "2026-10-31",
-     "elevationFt": 1037.26,
-     "storageKaf": 6790.0,
-     "releaseKaf": 484.0,
-     "hooverCapacityMw": 890.8,
-     "hooverEnergyGwh": 170.5,
-     "unitsAvailablePct": 69.0
+     "elevationFt": 1035.17
     },
     {
      "date": "2026-11-30",
-     "elevationFt": 1035.86,
-     "storageKaf": 6695.0,
-     "releaseKaf": 597.0,
-     "hooverCapacityMw": 751.8,
-     "hooverEnergyGwh": 212.3,
-     "unitsAvailablePct": 59.0
+     "elevationFt": 1034.92
     },
     {
      "date": "2026-12-31",
-     "elevationFt": 1037.31,
-     "storageKaf": 6794.0,
-     "releaseKaf": 527.0,
-     "hooverCapacityMw": 1191.9,
-     "hooverEnergyGwh": 182.0,
-     "unitsAvailablePct": 92.0
+     "elevationFt": 1034.21
     },
     {
      "date": "2027-01-31",
-     "elevationFt": 1039.75,
-     "storageKaf": 6961.0,
-     "releaseKaf": 522.0,
-     "hooverCapacityMw": 1032.4,
-     "hooverEnergyGwh": 186.5,
-     "unitsAvailablePct": 79.0
+     "elevationFt": 1034.02
     },
     {
      "date": "2027-02-28",
-     "elevationFt": 1041.68,
-     "storageKaf": 7094.0,
-     "releaseKaf": 476.0,
-     "hooverCapacityMw": 809.0,
-     "hooverEnergyGwh": 165.3,
-     "unitsAvailablePct": 61.0
+     "elevationFt": 1033.38
     },
     {
      "date": "2027-03-31",
-     "elevationFt": 1037.95,
-     "storageKaf": 6837.0,
-     "releaseKaf": 937.0,
-     "hooverCapacityMw": 896.7,
-     "hooverEnergyGwh": 332.3,
-     "unitsAvailablePct": 69.0
+     "elevationFt": 1026.92
     },
     {
      "date": "2027-04-30",
-     "elevationFt": 1031.61,
-     "storageKaf": 6412.0,
-     "releaseKaf": 1041.0,
-     "hooverCapacityMw": 337.0,
-     "hooverEnergyGwh": 243.5,
-     "unitsAvailablePct": 24.0
+     "elevationFt": 1019.03
     },
     {
      "date": "2027-05-31",
-     "elevationFt": 1023.95,
-     "storageKaf": 5914.0,
-     "releaseKaf": 1072.0,
-     "hooverCapacityMw": 324.4,
-     "hooverEnergyGwh": 243.0,
-     "unitsAvailablePct": 24.0
+     "elevationFt": 1012.55
     },
     {
      "date": "2027-06-30",
-     "elevationFt": 1018.3,
-     "storageKaf": 5559.0,
-     "releaseKaf": 908.0,
-     "hooverCapacityMw": 315.1,
-     "hooverEnergyGwh": 228.0,
-     "unitsAvailablePct": 24.0
+     "elevationFt": 1008.18
     },
     {
      "date": "2027-07-31",
-     "elevationFt": 1016.29,
-     "storageKaf": 5435.0,
-     "releaseKaf": 769.0,
-     "hooverCapacityMw": 311.7,
-     "hooverEnergyGwh": 232.2,
-     "unitsAvailablePct": 24.0
+     "elevationFt": 1007.37
     },
     {
      "date": "2027-08-31",
-     "elevationFt": 1016.57,
-     "storageKaf": 5452.0,
-     "releaseKaf": 710.0,
-     "hooverCapacityMw": 312.2,
-     "hooverEnergyGwh": 231.9,
-     "unitsAvailablePct": 24.0
+     "elevationFt": 1009.64
     },
     {
      "date": "2027-09-30",
-     "elevationFt": 1015.45,
-     "storageKaf": 5383.0,
-     "releaseKaf": 624.0,
-     "hooverCapacityMw": 310.3,
-     "hooverEnergyGwh": 209.8,
-     "unitsAvailablePct": 24.0
+     "elevationFt": 1010.48
     },
     {
      "date": "2027-10-31",
-     "elevationFt": 1015.52,
-     "storageKaf": 5388.0,
-     "releaseKaf": 487.0,
-     "hooverCapacityMw": 232.8,
-     "hooverEnergyGwh": 164.9,
-     "unitsAvailablePct": 18.0
+     "elevationFt": 1011.64
     },
     {
      "date": "2027-11-30",
-     "elevationFt": 1014.25,
-     "storageKaf": 5310.0,
-     "releaseKaf": 578.0,
-     "hooverCapacityMw": 231.3,
-     "hooverEnergyGwh": 172.0,
-     "unitsAvailablePct": 18.0
+     "elevationFt": 1011.45
     },
     {
      "date": "2027-12-31",
-     "elevationFt": 1015.74,
-     "storageKaf": 5401.0,
-     "releaseKaf": 534.0,
-     "hooverCapacityMw": 310.8,
-     "hooverEnergyGwh": 176.8,
-     "unitsAvailablePct": 24.0
+     "elevationFt": 1013.85
     },
     {
      "date": "2028-01-31",
-     "elevationFt": 1020.85,
-     "storageKaf": 5718.0,
-     "releaseKaf": 497.0,
-     "hooverCapacityMw": 239.4,
-     "hooverEnergyGwh": 168.9,
-     "unitsAvailablePct": 18.0
+     "elevationFt": 1017.71
     },
     {
      "date": "2028-02-29",
-     "elevationFt": 1024.2,
-     "storageKaf": 5930.0,
-     "releaseKaf": 455.0,
-     "hooverCapacityMw": 243.6,
-     "hooverEnergyGwh": 155.2,
-     "unitsAvailablePct": 18.0
+     "elevationFt": 1020.53
     },
     {
      "date": "2028-03-31",
-     "elevationFt": 1022.57,
-     "storageKaf": 5827.0,
-     "releaseKaf": 903.0,
-     "hooverCapacityMw": 322.1,
-     "hooverEnergyGwh": 239.0,
-     "unitsAvailablePct": 24.0
+     "elevationFt": 1017.21
     },
     {
      "date": "2028-04-30",
-     "elevationFt": 1018.06,
-     "storageKaf": 5544.0,
-     "releaseKaf": 1004.0,
-     "hooverCapacityMw": 314.7,
-     "hooverEnergyGwh": 226.5,
-     "unitsAvailablePct": 24.0
+     "elevationFt": 1011.16
     },
     {
      "date": "2028-05-31",
-     "elevationFt": 1013.36,
-     "storageKaf": 5256.0,
-     "releaseKaf": 1036.0,
-     "hooverCapacityMw": 306.9,
-     "hooverEnergyGwh": 228.4,
-     "unitsAvailablePct": 24.0
+     "elevationFt": 1003.83
     },
     {
      "date": "2028-06-30",
-     "elevationFt": 1009.69,
-     "storageKaf": 5036.0,
-     "releaseKaf": 884.0,
-     "hooverCapacityMw": 300.8,
-     "hooverEnergyGwh": 216.7,
-     "unitsAvailablePct": 24.0
+     "elevationFt": 998.49
+    },
+    {
+     "date": "2028-07-31",
+     "elevationFt": 996.95
+    },
+    {
+     "date": "2028-08-31",
+     "elevationFt": 998.34
+    }
+   ]
+  },
+  {
+   "id": "most7",
+   "label": "Most Probable",
+   "detail": "7.0 maf Powell release",
+   "study": "September 2026",
+   "url": "https://www.usbr.gov/lc/region/g4000/24mo/2026/September-Chart.pdf",
+   "note": "Median hydrology with a 7.0 maf Glen Canyon Dam release in water year 2027. Read from Reclamation's chart (\u00b10.3 ft).",
+   "digitized": true,
+   "series": [
+    {
+     "date": "2026-09-30",
+     "elevationFt": 1038.39
+    },
+    {
+     "date": "2026-10-31",
+     "elevationFt": 1035.17
+    },
+    {
+     "date": "2026-11-30",
+     "elevationFt": 1034.92
+    },
+    {
+     "date": "2026-12-31",
+     "elevationFt": 1034.21
+    },
+    {
+     "date": "2027-01-31",
+     "elevationFt": 1034.02
+    },
+    {
+     "date": "2027-02-28",
+     "elevationFt": 1033.38
+    },
+    {
+     "date": "2027-03-31",
+     "elevationFt": 1026.92
+    },
+    {
+     "date": "2027-04-30",
+     "elevationFt": 1019.03
+    },
+    {
+     "date": "2027-05-31",
+     "elevationFt": 1016.5
+    },
+    {
+     "date": "2027-06-30",
+     "elevationFt": 1015.53
+    },
+    {
+     "date": "2027-07-31",
+     "elevationFt": 1018.05
+    },
+    {
+     "date": "2027-08-31",
+     "elevationFt": 1023.65
+    },
+    {
+     "date": "2027-09-30",
+     "elevationFt": 1025.54
+    },
+    {
+     "date": "2027-10-31",
+     "elevationFt": 1025.55
+    },
+    {
+     "date": "2027-11-30",
+     "elevationFt": 1024.24
+    },
+    {
+     "date": "2027-12-31",
+     "elevationFt": 1025.14
+    },
+    {
+     "date": "2028-01-31",
+     "elevationFt": 1027.3
+    },
+    {
+     "date": "2028-02-29",
+     "elevationFt": 1028.73
+    },
+    {
+     "date": "2028-03-31",
+     "elevationFt": 1024.13
+    },
+    {
+     "date": "2028-04-30",
+     "elevationFt": 1018.21
+    },
+    {
+     "date": "2028-05-31",
+     "elevationFt": 1012.65
+    },
+    {
+     "date": "2028-06-30",
+     "elevationFt": 1009.1
+    },
+    {
+     "date": "2028-07-31",
+     "elevationFt": 1009.43
+    },
+    {
+     "date": "2028-08-31",
+     "elevationFt": 1012.59
     }
    ]
   },
@@ -673,7 +554,7 @@
    "label": "Probable Maximum",
    "study": "August 2026",
    "url": "https://www.usbr.gov/lc/region/g4000/24mo/2026/AUG26_MAX.pdf",
-   "note": "Wet hydrology, exceeded ~10% of the time.",
+   "note": "Wet hydrology, exceeded ~10% of the time. The latest maximum run; Reclamation pairs it with September's studies.",
    "series": [
     {
      "date": "2025-08-31",
@@ -1002,12 +883,5 @@
    ]
   }
  ],
- "pointForecasts": [
-  {
-   "date": "2026-12-31",
-   "elevationFt": 1034.18,
-   "label": "September 2026 Most Probable (Dec 31, 2026)",
-   "url": "https://www.usbr.gov/lc/region/g4000/24mo/2026/September-Chart.pdf"
-  }
- ]
+ "pointForecasts": []
 }

@@ -427,6 +427,7 @@ body.is-manual #elev-input { border-color: var(--orange); }
 .tl-future { fill: rgba(242, 201, 76, 0.05); }
 .tl-th { stroke: rgba(255, 255, 255, 0.14); stroke-dasharray: 3 3; }
 .tl-th-power { stroke: rgba(239, 91, 76, 0.55); }
+.tl-th-full { stroke: rgba(92, 200, 224, 0.45); stroke-dasharray: none; }
 .tl-th-label { fill: var(--faint); font-size: 9.5px; }
 .tl-axis text { fill: var(--muted); font-size: 10px; }
 .tl-axis path, .tl-axis line { stroke: rgba(255, 255, 255, 0.18); }
