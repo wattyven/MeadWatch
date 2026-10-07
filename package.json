@@ -7,14 +7,7 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "test": "node tests/smoke.mjs",
-    "data": "npm run data:levels && npm run data:regions && npm run data:waterways",
-    "data:levels": "node scripts/fetch_levels.mjs",
-    "data:regions": "node scripts/build_regions.mjs",
-    "data:forecast": "python3 scripts/extract_24ms.py",
-    "data:bathymetry": "python3 scripts/build_bathymetry.py",
-    "data:waterways": "node scripts/build_waterways.mjs",
-    "og": "node scripts/make_og.mjs"
+    "data:levels": "node scripts/fetch_levels.mjs"
   },
   "dependencies": {
     "d3": "^7.9.0",

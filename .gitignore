@@ -1,4 +1,14 @@
 node_modules
 dist
 .cache
-tests/screenshots
+.DS_Store
+
+# Vite loads .env (public build settings, committed) then .env.local (machine-specific or secret, never committed)
+.env*.local
+
+# Local tooling, kept on disk but out of the repository:
+# the data pipeline (except the daily fetcher the deploy workflow runs) and the browser tests
+scripts/*
+!scripts/fetch_levels.mjs
+tests/
+.vscode/
