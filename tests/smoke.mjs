@@ -71,7 +71,7 @@ await page.waitForTimeout(600);
 const hoover = await page.textContent('.stat:nth-child(3) .v');
 check('below 950 ft Hoover capacity drops to zero', hoover.includes('0 MW'), hoover);
 const yumaStatus = await page.locator('.rg[data-id="yuma"] .rg-status').textContent();
-check('downstream senior users flagged when releases are limited', /limited/i.test(yumaStatus), yumaStatus);
+check('downstream senior users flagged when releases are limited', /at risk|limited/i.test(yumaStatus), yumaStatus);
 await settle(20000);
 await page.screenshot({path: `${out}/03-940ft.png`});
 
@@ -315,6 +315,29 @@ const fresh = async (hash, viewport = {width: 1400, height: 900}) => {
     await p.waitForTimeout(400);
     const reset = await p.evaluate(() => ({from: document.querySelector('#win-from').value, to: document.querySelector('#win-to').value, hash: location.hash}));
     check('Reset view returns to the whole 2000–2028 timeline', reset.from === '2000-01' && reset.to === '2028-08' && !/from=/.test(reset.hash), JSON.stringify(reset));
+    await p.close();
+}
+
+// ---- Laptop-sized screen: a selected region is in view; legend can be hidden
+{
+    const p = await fresh('', {width: 1440, height: 900});
+    await p.click('.rg[data-id="socal"]');
+    await p.waitForTimeout(900);
+    const r = await p.evaluate(() => {
+        const panel = document.querySelector('#impacts').getBoundingClientRect();
+        const card = document.querySelector('.rg-detail')?.getBoundingClientRect();
+        return {card: !!card, top: card && Math.round(card.top), inView: !!card && card.top >= panel.top && card.top + 120 <= panel.bottom,
+            flowsClosed: !document.querySelector('.flows').open, howtoClosed: !document.querySelector('.howto').open};
+    });
+    check('on a 1440×900 screen the selected region’s card is visible without scrolling', r.card && r.inView, JSON.stringify(r));
+    check('on a laptop-height screen the flows and how-to sections start collapsed', r.flowsClosed && r.howtoClosed);
+    await p.screenshot({path: `${out}/18-laptop-selected.png`});
+    await p.click('[data-hide-legend]');
+    const hidden = await p.evaluate(() => ({legend: document.querySelector('#legend').hidden, box: document.querySelector('#legend-toggle').checked}));
+    await p.click('#legend-toggle');
+    const shown = await p.evaluate(() => !document.querySelector('#legend').hidden);
+    check('legend can be hidden and shown again', hidden.legend && !hidden.box && shown, JSON.stringify({hidden, shown}));
+    check('“Show full lake” setting is gone', await p.evaluate(() => !document.querySelector('#ghost')));
     await p.close();
 }
 

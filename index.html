@@ -66,7 +66,7 @@
         <button data-v="region">Downstream</button>
     </div>
     <label class="check"><input type="checkbox" id="terrain" checked/> 3D terrain</label>
-    <label class="check"><input type="checkbox" id="ghost" checked/> Full-pool outline</label>
+    <label class="check legend-check"><input type="checkbox" id="legend-toggle" checked/> Legend</label>
 </div>
 
 <nav class="mtabs panel" id="mtabs" aria-label="Panels">
@@ -180,8 +180,8 @@
         </div>
         <label class="field" id="scenario-field">Forecast
             <select id="scenario">
-                <option value="most">Most likely · less water from Lake Powell (6.0 maf)</option>
-                <option value="most7">Most likely · more water from Lake Powell (7.0 maf)</option>
+                <option value="most">Most likely (6.0 maf from Lake Powell)</option>
+                <option value="most7">Most likely (7.0 maf from Lake Powell)</option>
                 <option value="min">Dry-year forecast</option>
                 <option value="max">Wet-year forecast</option>
             </select>

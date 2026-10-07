@@ -249,7 +249,11 @@ export interface RegionImpact {
     physSev: number;
     /** true when the region faces a scheduled water cut or a physical supply risk */
     waterAffected: boolean;
+    /** full sentences, for the detail card */
     status: string;
+    /** one compact line, for the region list */
+    summary: string;
+    /** a few words, for map labels */
     short: string;
 }
 
@@ -293,28 +297,42 @@ export function regionImpacts(h: number, s: Shortage): RegionImpact[] {
         const pct = cutFrac ? Math.round(cutFrac * 100) : 0;
         const plPct = pl !== null ? Math.round(pl * 100) : 0;
         const parts: string[] = [];
+        const brief: string[] = [];
         let short: string;
         if (severity === null) {
             parts.push('Mexico’s 2027–28 share of the cuts is set by a U.S.–Mexico agreement (Minute 334) that isn’t modelled here');
+            brief.push('2027–28 cut set by treaty (not modelled)');
             short = 'Cut not modelled';
         } else if (physSev >= 1) {
             parts.push(physical!);
+            brief.push(r.id === 'lv' ? 'Lake below Las Vegas’s deepest pump' : 'No water can leave Lake Mead');
             short = 'No water arrives';
         } else {
             if (cut && cutFrac! > 0.005) {
+                brief.push(cutFrac! >= 0.995 ? `All its river water cut (${fmtAfLong(cut)} acre-feet a year)` : `${fmtAfLong(cut)} acre-feet a year less river water (${pct}%)`);
                 parts.push(cutFrac! >= 0.995
                     ? `Gets ${fmtAfLong(cut)} acre-feet less river water a year: none of its usual Colorado River supply`
                     : `Gets ${fmtAfLong(cut)} acre-feet less river water a year (${pct}% of its usual Colorado River supply)`);
             }
-            if (physical) parts.push(physical);
-            if (!parts.length) parts.push(r.id === 'crit' || r.id === 'yuma' ? 'Protected by senior water rights: no cut scheduled' : 'No water cut scheduled at this level');
-            if (pl !== null && pl > 0.02) parts.push(`Hoover Dam is making ${plPct}% less power, so less low-cost electricity reaches its utilities`);
+            if (physical) {
+                parts.push(physical);
+                brief.push(physSev > 0 && r.id !== 'lv' ? 'Deliveries at risk below 950 ft' : physical);
+            }
+            if (!parts.length) {
+                const none = r.id === 'crit' || r.id === 'yuma' ? 'Protected by senior water rights: no cut scheduled' : 'No water cut scheduled at this level';
+                parts.push(none);
+                brief.push(r.id === 'crit' || r.id === 'yuma' ? 'No cut (senior water rights)' : 'No water cut');
+            }
+            if (pl !== null && pl > 0.02) {
+                parts.push(`Hoover Dam is making ${plPct}% less power, so less low-cost electricity reaches its utilities`);
+                brief.push(`${plPct}% less Hoover power`);
+            }
             short = cut && cutFrac! > 0.005 ? (cutFrac! >= 0.995 ? 'All river water cut' : `${pct}% less river water`)
                 : physSev > 0 ? 'Supply at risk'
                     : pl !== null && pl > 0.05 ? `${plPct}% less Hoover power` : 'No water cut';
         }
         const waterAffected = (cutFrac ?? 0) >= 0.02 || physSev > 0;
-        return {id: r.id, severity, cutAf: cut, cutFrac, powerLossFrac: pl, physical, physSev, waterAffected, status: parts.join(' · '), short};
+        return {id: r.id, severity, cutAf: cut, cutFrac, powerLossFrac: pl, physical, physSev, waterAffected, status: parts.join(' · '), summary: brief.join(' · '), short};
     });
 }
 

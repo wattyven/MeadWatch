@@ -153,6 +153,14 @@ async function main() {
         state.selected = state.selected === id ? null : id;
         mapH.selectRegion(state.selected);
         update();
+        // the selected region's card is at the top of the panel: bring it into view
+        // (instant, after the redraw, so a re-render can't interrupt it)
+        requestAnimationFrame(() => { $('#impacts').scrollTop = 0; });
+        // on phones, a region tapped on the map opens the "Who's affected" tab
+        if (state.selected && window.innerWidth <= 760) {
+            const tab = $<HTMLButtonElement>('#mtabs button[data-p="impacts"]');
+            if (tab.getAttribute('aria-pressed') !== 'true') tab.click();
+        }
     }
 
     // ---- playback
@@ -354,6 +362,7 @@ function renderAlert(app: AppData) {
 function renderLegend() {
     const sev = SEVERITY_STOPS.map(([v, c]) => `<span class="sev-chip" style="--c:${c}">${severityLabel(v)}</span>`).join('');
     $('#legend').innerHTML = `
+        <div class="lg-head"><b>Legend</b><button type="button" class="btn-link" data-hide-legend aria-label="Hide legend">Hide</button></div>
         <div class="lg-row"><span class="lg-swatch water"></span><span>Water (shade = depth)</span></div>
         <div class="lg-row"><span class="lg-swatch bed"></span><span>${term('bathtub-ring', 'Exposed lakebed')} (bands every 10 ft)</span></div>
         <div class="lg-row"><span class="lg-swatch shore"></span><span>Shoreline when ${term('full-pool', 'full')} (1,229 ft)</span></div>
@@ -446,8 +455,25 @@ function renderImpacts(app: AppData, s: State, d: Derived, select: (id: string |
     const sel = s.selected ? REGIONS.find(r => r.id === s.selected) : null;
     const selImp = sel ? byId.get(sel.id)! : null;
 
+    const detail = sel && selImp ? `<div class="rg-detail" style="--c:${severityColor(selImp.severity)}">
+            <div class="rg-detail-head">
+                <span><span class="rg-detail-kicker">Selected region · <span style="color:var(--c)">${severityLabel(selImp.severity)}</span></span><b>${sel.name}</b></span>
+                <button class="btn-link" data-close>← All regions</button>
+            </div>
+            <p class="rg-meaning"><b>What this means:</b> ${linkTerms(impactMeaning(sel, selImp))}</p>
+            <p>${linkTerms(sel.blurb)}</p>
+            <dl>
+                <dt>Right now</dt><dd>${linkTerms(selImp.status)}</dd>
+                <dt>Dependence</dt><dd>${linkTerms(sel.dependence)}</dd>
+                ${sel.hooverShare ? `<dt>Hydropower</dt><dd>${sel.hooverShare}. At this level Hoover Dam can make about ${Math.round((selImp.powerLossFrac ?? 0) * 100)}% less power than when the lake is full, so those utilities get less low-cost electricity.</dd>` : ''}
+                ${selImp.physical ? `<dt>Infrastructure</dt><dd>${selImp.physical}</dd>` : ''}
+                <dt>How this is estimated</dt><dd>${linkTerms(sel.basis)}</dd>
+            </dl>
+        </div>` : '';
+
     $('#impacts-body').innerHTML = `
         <h2>Who depends on Lake Mead</h2>
+        ${detail}
         <p class="sub">≈${(popAll / 1e6).toFixed(0)} million people and ≈${(acAll / 1e6).toFixed(2)} million irrigated acres in Arizona,
             California and Nevada, plus Mexico. Basin-wide, the Colorado River serves ~40 million people and ~5 million acres.</p>
         <div class="kpis">
@@ -457,7 +483,7 @@ function renderImpacts(app: AppData, s: State, d: Derived, select: (id: string |
         </div>
         ${flowSection(d)}
         <details class="howto" ${howtoOpen ? 'open' : ''}>
-            <summary>How to read these numbers</summary>
+            <summary><span class="sec-title">How to read these numbers</span><span class="sec-sum">Water cuts, power losses and colours, explained</span></summary>
             <ul>
                 <li><b>“Gets 21,000 acre-feet less river water a year”</b> is the region’s ${term('water-cut', 'water cut')}: how much less Colorado River water it receives this year under the rules.
                     An ${term('acre-foot', 'acre-foot')} is roughly a year’s water for two homes. The percentage is the share of its usual river supply; “none of its usual supply” means it gets no Colorado River water at all.</li>
@@ -467,7 +493,7 @@ function renderImpacts(app: AppData, s: State, d: Derived, select: (id: string |
                 <li>${term('est', 'est.').replace('class="term"', 'class="term est"')} marks MeadWatch’s own estimates, such as how a state’s cut is split among its cities and farms. ${term('senior-rights', 'Senior water rights')} explain why some regions are cut later. <button class="btn-link" data-about>Methods</button></li>
             </ul>
         </details>
-        <p class="list-hint">Click a region for what its numbers mean in practice.</p>
+        <p class="list-hint">${sel ? 'Other regions:' : 'Click a region for what its numbers mean in practice.'}</p>
         <ul class="regions">
             ${sorted.map(r => {
                 const imp = byId.get(r.id)!;
@@ -477,30 +503,19 @@ function renderImpacts(app: AppData, s: State, d: Derived, select: (id: string |
                     <span class="rg-dot"></span>
                     <span class="rg-main">
                         <span class="rg-name">${r.short}<span class="rg-kind">${kind}</span><span class="rg-sev">${severityLabel(imp.severity)}</span></span>
-                        <span class="rg-status">${imp.status}${ESTIMATED_SPLIT.has(r.id) && (imp.cutAf ?? 0) > 0 ? ' <span class="est">est.</span>' : ''}</span>
+                        <span class="rg-status">${imp.summary}${ESTIMATED_SPLIT.has(r.id) && (imp.cutAf ?? 0) > 0 ? ' <span class="est">est.</span>' : ''}</span>
                         <span class="rg-meta">${r.population ? `${fmtPeople(r.population)} people` : ''}${r.population && r.acres ? ' · ' : ''}${r.acres ? `${nf.format(r.acres)} acres` : ''}</span>
                     </span>
                     <span class="rg-bar"><i style="height:${Math.round((imp.severity ?? 0) * 100)}%"></i></span>
                 </button></li>`;
             }).join('')}
-        </ul>
-        ${sel && selImp ? `<div class="rg-detail" style="--c:${severityColor(selImp.severity)}">
-            <div class="rg-detail-head"><b>${sel.name}</b><button class="btn-link" data-close>Close</button></div>
-            <p class="rg-meaning"><b>What this means:</b> ${linkTerms(impactMeaning(sel, selImp))}</p>
-            <p>${linkTerms(sel.blurb)}</p>
-            <dl>
-                <dt>Right now</dt><dd>${linkTerms(selImp.status)}</dd>
-                <dt>Dependence</dt><dd>${linkTerms(sel.dependence)}</dd>
-                ${sel.hooverShare ? `<dt>Hydropower</dt><dd>${sel.hooverShare}. At this level Hoover Dam can make about ${Math.round((selImp.powerLossFrac ?? 0) * 100)}% less power than when the lake is full, so those utilities get less low-cost electricity.</dd>` : ''}
-                ${selImp.physical ? `<dt>Infrastructure</dt><dd>${selImp.physical}</dd>` : ''}
-                <dt>How this is estimated</dt><dd>${sel.basis}</dd>
-            </dl>
-        </div>` : ''}`;
+        </ul>`;
 
     $('#impacts-body').querySelectorAll<HTMLButtonElement>('.rg').forEach(b => b.addEventListener('click', () => select(b.dataset.id!)));
     $('#impacts-body').querySelector('[data-close]')?.addEventListener('click', () => select(null));
     $('#impacts-body').querySelector('[data-about]')?.addEventListener('click', () => ($('#about-dialog') as HTMLDialogElement).showModal());
     $('#impacts-body').querySelector('.howto')?.addEventListener('toggle', e => { howtoOpen = (e.target as HTMLDetailsElement).open; });
+    $('#impacts-body').querySelector('.flows')?.addEventListener('toggle', e => { flowsOpen = (e.target as HTMLDetailsElement).open; });
     void app;
 }
 
@@ -517,8 +532,13 @@ function flowSection(d: Derived) {
             <span class="fl-pct">${f.dry ? '0%' : `${pct}%`}</span>
         </li>`;
     };
-    return `<section class="flows" aria-label="Downstream river and canal flows">
-        <h3>River &amp; canal flows <span class="sub2">in ${term('maf', 'MAF')} per year, vs. ${term('normal-deliveries', 'normal')}</span></h3>
+    const headline = r1.dry ? 'no water released' : `${r1.maf.toFixed(2)} MAF a year, ${Math.round(r1.ratio * 100)}% of normal`;
+    return `<details class="flows" ${flowsOpen ? 'open' : ''} aria-label="Downstream river and canal flows">
+        <summary>
+            <span class="sec-title">River &amp; canal flows</span>
+            <span class="sec-sum">Below Hoover Dam: ${headline}</span>
+        </summary>
+        <p class="sub2">Water moving through each river reach and canal, in ${term('maf', 'MAF')} per year, compared with ${term('normal-deliveries', 'normal')}.</p>
         <ul>${d.flows.map(row).join('')}</ul>
         ${note ? `<p class="fl-note bad">${note}</p>` : r1.observed
             ? `<p class="fl-note">Hoover release over the past year: ${r1.maf.toFixed(2)} MAF (USBR${d.source.startsWith('Forecast') ? ' + 24-Month Study' : ''}). Canal flows are scheduled deliveries after cuts.</p>`
@@ -526,7 +546,7 @@ function flowSection(d: Derived) {
         <div class="lakes">${d.lakes.map(l => `<div class="lake ${l.status.startsWith('No inflow') ? 'bad' : ''}">
             <b>${l.name}</b> <span>${l.elevation !== null ? `${n1.format(l.elevation)} ft` : `normal ${l.range[0]}–${l.range[1]} ft`}</span>
             <small>${l.dam} · ${l.status.replace('normal operating range', term('operating-range', 'normal operating range'))}</small></div>`).join('')}</div>
-    </section>`;
+    </details>`;
 }
 
 /** Link the first mention of known acronyms and terms in a region's prose to the glossary. */
@@ -544,8 +564,14 @@ function linkTerms(text: string) {
     return out;
 }
 
-/** "How to read these numbers" stays open or closed across panel redraws. */
-let howtoOpen = true;
+/**
+ * Collapsible sections in the right panel keep their state across redraws. They start
+ * open only on tall screens, so on a laptop the region list (and a selected region)
+ * is in view without scrolling.
+ */
+const TALL_SCREEN = window.innerHeight >= 1150;
+let howtoOpen = TALL_SCREEN;
+let flowsOpen = TALL_SCREEN;
 
 function fmtPeople(n: number) {
     return n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : `${Math.round(n / 1000)}k`;
@@ -587,7 +613,18 @@ function wireControls(app: AppData, s: State, m: MapHandles, update: () => void)
     }));
     document.querySelectorAll<HTMLButtonElement>('#views button').forEach(b => b.addEventListener('click', () => m.setView(b.dataset.v as ViewId)));
     $<HTMLInputElement>('#terrain').addEventListener('change', e => m.setTerrain((e.target as HTMLInputElement).checked));
-    $<HTMLInputElement>('#ghost').addEventListener('change', e => m.water.setGhost((e.target as HTMLInputElement).checked));
+    // legend: toolbar checkbox and the legend's own Hide button; remembered per browser
+    const legendToggle = $<HTMLInputElement>('#legend-toggle');
+    const showLegend = (on: boolean) => {
+        $('#legend').hidden = !on;
+        legendToggle.checked = on;
+        try { localStorage.setItem('mw-legend', on ? '1' : '0'); } catch { /* storage unavailable */ }
+    };
+    let legendPref = true;
+    try { legendPref = localStorage.getItem('mw-legend') !== '0'; } catch { /* storage unavailable */ }
+    showLegend(legendPref);
+    legendToggle.addEventListener('change', () => showLegend(legendToggle.checked));
+    $('#legend').addEventListener('click', e => { if ((e.target as Element).closest('[data-hide-legend]')) showLegend(false); });
 
     document.querySelectorAll<HTMLButtonElement>('#mode button').forEach(b => b.addEventListener('click', () => {
         const v = b.dataset.v as State['mode'];

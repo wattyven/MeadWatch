@@ -3,7 +3,6 @@
 // threshold raster (W): a pixel is water when the lake surface is above W.
 // Because the terrain underneath is the real lake floor and MapLibre's terrain
 // writes depth, canyon walls and exposed lakebed correctly occlude the plane.
-// A faint second plane at full pool marks where the water used to be.
 
 import type {CustomLayerInterface, CustomRenderMethodInput, Map as MlMap} from 'maplibre-gl';
 import type {BathyMeta} from './data';
@@ -30,8 +29,6 @@ uniform highp sampler2D u_w;
 uniform highp sampler2D u_floor;
 uniform vec2 u_size;
 uniform float u_level;
-uniform float u_full;
-uniform int u_mode;
 uniform float u_wOffset;
 uniform float u_wScale;
 in vec2 v_uv;
@@ -57,15 +54,6 @@ void main() {
     vec2 f = fract(p);
     float w00 = wAt(i), w10 = wAt(i + ivec2(1, 0)), w01 = wAt(i + ivec2(0, 1)), w11 = wAt(i + ivec2(1, 1));
     float W = mix(mix(w00, w10, f.x), mix(w01, w11, f.x), f.y);
-
-    if (u_mode == 1) {
-        // full-pool "ghost" surface over the exposed lakebed
-        if (W >= u_full || W < u_level) discard;
-        float edge = 1.0 - smoothstep(0.0, 6.0, u_full - W);
-        float a = 0.13 + 0.25 * edge;
-        fragColor = vec4(vec3(0.86, 0.94, 1.0) * a, a);
-        return;
-    }
 
     if (W >= u_level) discard;
     float bed = mix(mix(floorAt(i, w00), floorAt(i + ivec2(1, 0), w10), f.x),
@@ -97,7 +85,6 @@ export class WaterLayer implements CustomLayerInterface {
     readonly renderingMode = '3d' as const;
 
     level = 1038;
-    showGhost = true;
 
     private map?: MlMap;
     private gl?: WebGL2RenderingContext;
@@ -120,11 +107,6 @@ export class WaterLayer implements CustomLayerInterface {
         this.map?.triggerRepaint();
     }
 
-    setGhost(on: boolean) {
-        this.showGhost = on;
-        this.map?.triggerRepaint();
-    }
-
     onAdd(map: MlMap, gl: WebGLRenderingContext | WebGL2RenderingContext) {
         if (!(gl instanceof WebGL2RenderingContext)) throw new Error('WebGL2 is required for the water layer');
         this.map = map;
@@ -135,7 +117,7 @@ export class WaterLayer implements CustomLayerInterface {
         gl.linkProgram(prog);
         if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog) ?? 'link error');
         this.program = prog;
-        for (const u of ['u_matrix', 'u_extent', 'u_z', 'u_w', 'u_floor', 'u_size', 'u_level', 'u_full', 'u_mode', 'u_wOffset', 'u_wScale']) {
+        for (const u of ['u_matrix', 'u_extent', 'u_z', 'u_w', 'u_floor', 'u_size', 'u_level', 'u_wOffset', 'u_wScale']) {
             this.uniforms[u] = gl.getUniformLocation(prog, u);
         }
         this.vao = gl.createVertexArray()!;
@@ -193,7 +175,6 @@ export class WaterLayer implements CustomLayerInterface {
         gl.uniform2f(u.u_extent, this.extent[0], this.extent[1]);
         gl.uniform2f(u.u_size, this.meta.width, this.meta.height);
         gl.uniform1f(u.u_level, this.level);
-        gl.uniform1f(u.u_full, this.meta.fullPoolFt);
         gl.uniform1f(u.u_wOffset, this.meta.wEncoding.offsetFt);
         gl.uniform1f(u.u_wScale, this.meta.wEncoding.scale);
         gl.activeTexture(gl.TEXTURE0);
@@ -206,17 +187,8 @@ export class WaterLayer implements CustomLayerInterface {
         gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
         gl.disable(gl.CULL_FACE);
 
-        gl.uniform1i(u.u_mode, 0);
         gl.uniform1f(u.u_z, zFor(this.level));
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-
-        if (this.showGhost && exaggeration > 0) {
-            gl.depthMask(false);
-            gl.uniform1i(u.u_mode, 1);
-            gl.uniform1f(u.u_z, zFor(this.meta.fullPoolFt));
-            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-            gl.depthMask(true);
-        }
         gl.bindVertexArray(null);
         gl.activeTexture(gl.TEXTURE0);
     }
